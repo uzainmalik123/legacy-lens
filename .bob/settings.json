@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh .bob/hooks/pre-tool-policy.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

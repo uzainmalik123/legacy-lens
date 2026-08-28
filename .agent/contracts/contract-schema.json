@@ -1,0 +1,261 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://legacy-lens.local/agent/contracts/contract-schema.json",
+  "title": "AgentContract",
+  "description": "Machine-readable contract that defines the scope, requirements, and acceptance criteria for a single agent-implemented feature. The approved contract is the source of truth for implementation scope.",
+  "type": "object",
+  "required": [
+    "feature_id",
+    "objective",
+    "requirements",
+    "non_requirements",
+    "allowed_paths",
+    "forbidden_paths",
+    "expected_files",
+    "dependencies",
+    "test_requirements",
+    "security_requirements",
+    "acceptance_criteria",
+    "change_budget",
+    "iteration_limit",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "feature_id": {
+      "type": "string",
+      "description": "Unique slug identifying this feature. Lowercase, digits, single dashes only. Matches the plan and approval token filenames.",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "objective": {
+      "type": "string",
+      "description": "One-sentence description of what this feature achieves from the user's perspective.",
+      "maxLength": 280
+    },
+    "requirements": {
+      "type": "array",
+      "description": "Numbered list of concrete, testable requirements. Each requirement must be objectively verifiable.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Requirement identifier (e.g. REQ-001).",
+            "pattern": "^REQ-[0-9]+$"
+          },
+          "description": {
+            "type": "string",
+            "description": "Full requirement text. Must be specific enough that an implementer cannot misinterpret it.",
+            "minLength": 10
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["must", "should", "could"],
+            "default": "must",
+            "description": "MoSCoW priority: must (required for acceptance), should (expected), could (nice-to-have)."
+          }
+        }
+      }
+    },
+    "non_requirements": {
+      "type": "array",
+      "description": "Explicit list of things this feature does NOT include. Prevents scope creep.",
+      "items": {
+        "type": "string",
+        "minLength": 5
+      }
+    },
+    "allowed_paths": {
+      "type": "array",
+      "description": "File paths (relative to repository root) the implementer is permitted to create or modify. Glob patterns are supported. Any file not listed here is implicitly forbidden.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "forbidden_paths": {
+      "type": "array",
+      "description": "File paths (relative to repository root) that must never be touched by this implementation. Listed explicitly for clarity even if they would be excluded by allowed_paths.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_files": {
+      "type": "object",
+      "description": "Categorised list of files expected to change as a result of this implementation.",
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "array",
+          "description": "New files that will be created.",
+          "items": { "type": "string" }
+        },
+        "modified": {
+          "type": "array",
+          "description": "Existing files that will be modified.",
+          "items": { "type": "string" }
+        },
+        "deleted": {
+          "type": "array",
+          "description": "Existing files that will be deleted. Requires explicit justification.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "npm dependencies required by this feature. Any dependency not listed here must not be added.",
+      "additionalProperties": false,
+      "properties": {
+        "runtime": {
+          "type": "array",
+          "description": "Production dependencies (package.json 'dependencies').",
+          "items": {
+            "type": "object",
+            "required": ["name", "version", "justification"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string", "description": "Exact or range (e.g. '^1.2.3')." },
+              "justification": { "type": "string", "description": "Why this dependency is necessary and why no existing dependency satisfies the need." }
+            }
+          }
+        },
+        "dev": {
+          "type": "array",
+          "description": "Development-only dependencies (package.json 'devDependencies').",
+          "items": {
+            "type": "object",
+            "required": ["name", "version", "justification"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" },
+              "justification": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "test_requirements": {
+      "type": "array",
+      "description": "Tests that must exist and pass before this feature is considered complete.",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^TEST-[0-9]+$"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this test verifies, written as a full sentence."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["unit", "integration", "e2e", "security", "regression"],
+            "description": "Test category."
+          },
+          "requirement_ref": {
+            "type": "string",
+            "description": "The REQ-xxx this test validates (optional).",
+            "pattern": "^REQ-[0-9]+$"
+          }
+        }
+      }
+    },
+    "security_requirements": {
+      "type": "array",
+      "description": "Security properties that must hold for this feature. Each will be verified during the security review.",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "category"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SEC-[0-9]+$"
+          },
+          "description": {
+            "type": "string",
+            "description": "The security property that must hold."
+          },
+          "category": {
+            "type": "string",
+            "enum": ["auth", "input-validation", "output-encoding", "csrf", "ssrf", "path-traversal", "injection", "secret-exposure", "dependency", "configuration"]
+          }
+        }
+      }
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "description": "Objective, binary criteria. Each criterion must be answerable with pass/fail from observable behaviour — no subjective judgment.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^AC-[0-9]+$"
+          },
+          "description": {
+            "type": "string",
+            "description": "The observable outcome and how to verify it.",
+            "minLength": 10
+          },
+          "automated": {
+            "type": "boolean",
+            "description": "Whether this criterion can be verified by an automated test.",
+            "default": true
+          }
+        }
+      }
+    },
+    "change_budget": {
+      "type": "object",
+      "description": "Rough upper bounds on the size of this change. Used by scope-guard to flag excessive changes.",
+      "additionalProperties": false,
+      "properties": {
+        "files_changed": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of files expected to change."
+        },
+        "lines_added": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rough upper bound on lines added."
+        },
+        "lines_removed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rough upper bound on lines removed."
+        }
+      }
+    },
+    "iteration_limit": {
+      "type": "integer",
+      "description": "Maximum number of Fixer+Verifier iterations before the loop is considered stuck and human intervention is required. Default and maximum is 10.",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 10
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle status of this contract. Only 'approved' unlocks implementation.",
+      "enum": ["draft", "grilled", "approved", "superseded", "abandoned"]
+    },
+    "approved_at": {
+      "type": ["string", "null"],
+      "description": "ISO 8601 timestamp of when the human approved this contract. Null until /approve-plan is run.",
+      "format": "date-time"
+    }
+  }
+}

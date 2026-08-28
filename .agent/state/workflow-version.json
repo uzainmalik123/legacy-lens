@@ -1,10 +1,54 @@
 {
-  "version": "0.1.0",
+  "version": "0.3.0",
   "schema": 1,
-  "status": "foundation",
-  "description": "Agentic development workflow — foundation only. No agent stages are implemented yet.",
-  "stages": ["planner", "grill", "human-approval", "implementer", "scope-guard", "verifier", "fixer", "security-verification", "github-actions"],
-  "implementedStages": [],
+  "status": "operational",
+  "description": "Agentic development workflow — v0.3.0. Full state machine, /run-approved autonomous pipeline, enhanced custom modes, strengthened rule files, enhanced scope-guard skill, and updated all commands with workflow state integration.",
+  "maxIterations": 10,
+  "stages": [
+    "planner",
+    "grill",
+    "human-approval",
+    "implementer",
+    "scope-guard",
+    "verifier",
+    "fixer",
+    "security-verification"
+  ],
+  "implementedStages": [
+    "planner",
+    "grill",
+    "human-approval",
+    "implementer",
+    "scope-guard",
+    "verifier",
+    "fixer",
+    "security-verification"
+  ],
+  "commands": ["/feature", "/grill", "/approve-plan", "/implement", "/run-approved", "/verify", "/fix", "/security", "/status"],
+  "skills": [
+    "feature-planner",
+    "grill-me",
+    "implementation",
+    "test-writer",
+    "scope-guard",
+    "verification",
+    "security-review",
+    "fixer"
+  ],
+  "invariants": {
+    "maxIterations": 10,
+    "noProductionDeployment": true,
+    "noForcePush": true,
+    "noDirectProtectedBranchPush": true,
+    "noDestructiveSystemCommands": true,
+    "noSudo": true,
+    "noCredentialAccess": true,
+    "noExternalFilesystemAccess": true,
+    "noAutomaticScopeExpansion": true,
+    "noDependencyAdditionsOutsideContract": true,
+    "noVerificationReportCommandExecution": true
+  },
   "createdAt": "2025-01-15",
+  "updatedAt": "2025-01-15",
   "designDoc": ".agent/workflow-design.md"
 }

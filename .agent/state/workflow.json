@@ -1,0 +1,30 @@
+{
+  "workflow_id": "legacy-lens-agentic-workflow",
+  "feature_id": null,
+  "state": "IDLE",
+  "iteration": 0,
+  "max_iterations": 10,
+  "plan_approved": false,
+  "scope_status": null,
+  "verification_status": null,
+  "security_status": null,
+  "last_updated": "2025-01-15T00:00:00Z",
+  "_valid_states": [
+    "IDLE",
+    "PLANNING",
+    "GRILLING",
+    "AWAITING_APPROVAL",
+    "APPROVED",
+    "IMPLEMENTING",
+    "SCOPE_CHECK",
+    "VERIFYING",
+    "FIXING",
+    "SECURITY_REVIEW",
+    "LOCAL_PASSED",
+    "CI_PENDING",
+    "PASSED",
+    "BLOCKED",
+    "FAILED"
+  ],
+  "_notes": "state machine for the agentic development workflow. Update state as stages progress. Never reset iteration to 0 mid-feature; only reset when feature_id changes."
+}

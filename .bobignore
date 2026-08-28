@@ -1,0 +1,66 @@
+# .bobignore — Bob Access Restrictions
+#
+# This file prevents Bob (the AI agent) from reading files that contain
+# secrets, credentials, or other sensitive material.
+#
+# Syntax mirrors .gitignore: one pattern per line, # for comments.
+# Patterns are matched against repository-relative paths.
+
+# Environment and secrets files
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.test
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
+*.pub
+
+# Cloud and service credentials
+.aws/
+.gcloud/
+.azure/
+serviceAccountKey.json
+*-service-account*.json
+*credentials*.json
+*credentials*.yaml
+*credentials*.yml
+
+# Token and secret stores
+.netrc
+.npmrc
+.yarnrc
+auth.json
+secrets.json
+secrets.yaml
+secrets.yml
+*.secret
+*.secrets
+vault-token
+
+# SSH configuration
+.ssh/
+
+# Password and keychain files
+*.keystore
+*.jks
+*.kdbx
+
+# Local configuration that may contain secrets
+*.local
+config.local.*
+settings.local.*

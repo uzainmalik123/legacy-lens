@@ -1,0 +1,10 @@
+{
+  "version": "0.1.0",
+  "schema": 1,
+  "status": "foundation",
+  "description": "Agentic development workflow — foundation only. No agent stages are implemented yet.",
+  "stages": ["planner", "grill", "human-approval", "implementer", "scope-guard", "verifier", "fixer", "security-verification", "github-actions"],
+  "implementedStages": [],
+  "createdAt": "2025-01-15",
+  "designDoc": ".agent/workflow-design.md"
+}

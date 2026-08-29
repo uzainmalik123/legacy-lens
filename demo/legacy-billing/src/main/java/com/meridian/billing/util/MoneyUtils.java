@@ -15,7 +15,7 @@ public class MoneyUtils {
      * Rounds a late fee value to two decimal places.
      */
     public static BigDecimal roundLateFee(BigDecimal value) {
-        return value.setScale(2, RoundingMode.HALF_UP);
+        return value.setScale(2, RoundingMode.DOWN);
     }
 
     /**

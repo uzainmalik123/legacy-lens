@@ -15,6 +15,7 @@ import type { GuardrailTest } from "@/lib/analysis/guardrail-test";
 // ---------------------------------------------------------------------------
 interface GuardrailTestViewProps {
   guardrailTest: GuardrailTest;
+  analysisMode?: "fixture" | "live";
 }
 
 // ---------------------------------------------------------------------------
@@ -44,7 +45,7 @@ function GuardrailSection({
 // GuardrailTestView — main export
 // SEC-402: no dangerouslySetInnerHTML; all fields from typed domain model only.
 // ---------------------------------------------------------------------------
-export default function GuardrailTestView({ guardrailTest }: GuardrailTestViewProps) {
+export default function GuardrailTestView({ guardrailTest, analysisMode }: GuardrailTestViewProps) {
   const [copyLabel, setCopyLabel] = useState<"Copy" | "Copied">("Copy");
 
   function handleCopy() {
@@ -90,15 +91,21 @@ export default function GuardrailTestView({ guardrailTest }: GuardrailTestViewPr
         </div>
 
         {/* FIXTURE-DRIVEN badge — REQ-009, communicates not live Bob output */}
-        <span
-          className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-sm shrink-0"
-          style={{
-            background: "rgba(107, 114, 128, 0.15)",
-            color: "var(--text-muted)",
-          }}
-        >
-          Fixture-driven
-        </span>
+<span
+  className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-sm shrink-0"
+  style={{
+    background:
+      analysisMode === "live"
+        ? "rgba(74, 222, 128, 0.10)"
+        : "rgba(107, 114, 128, 0.15)",
+    color:
+      analysisMode === "live"
+        ? "#4ade80"
+        : "var(--text-muted)",
+  }}
+>
+  {analysisMode === "live" ? "Bob-generated" : "Fixture-driven"}
+</span>
       </div>
 
       {/* Coverage target */}

@@ -268,6 +268,7 @@ export default function ReviewWorkspace({ initialSession }: ReviewWorkspaceProps
                 ? session.guardrailTest
                 : undefined
             }
+            analysisMode={mode}
           />
         </div>
       </main>

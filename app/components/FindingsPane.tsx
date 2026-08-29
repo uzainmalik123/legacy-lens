@@ -67,6 +67,7 @@ interface FindingsPaneProps {
   contract: BehavioralContract;
   intent?: RevealIntent;
   guardrailTest?: GuardrailTest;
+  analysisMode?: "fixture" | "live";
 }
 
 // ---------------------------------------------------------------------------
@@ -246,6 +247,7 @@ function FindingDetail({
   guardrailTest,
   showIntent,
   onToggleIntent,
+  analysisMode
 }: {
   finding: ReviewFinding;
   contract: BehavioralContract;
@@ -253,6 +255,7 @@ function FindingDetail({
   guardrailTest?: GuardrailTest;
   showIntent: boolean;
   onToggleIntent: () => void;
+  analysisMode: "fixture" | "live";
 }) {
   const colors = severityColor(finding.severity);
   const conf = formatConfidence(finding.confidence);
@@ -552,7 +555,7 @@ function FindingDetail({
 
           {/* GuardrailTestView — shown after transition completes */}
           {generateStage === "done" && (
-            <GuardrailTestView guardrailTest={guardrailTest} />
+            <GuardrailTestView guardrailTest={guardrailTest} analysisMode={analysisMode} />
           )}
         </div>
       )}
@@ -641,6 +644,7 @@ export default function FindingsPane({
   contract,
   intent,
   guardrailTest,
+  analysisMode
 }: FindingsPaneProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showIntent, setShowIntent] = useState(false);
@@ -711,6 +715,7 @@ export default function FindingsPane({
                 guardrailTest={guardrailTest}
                 showIntent={showIntent}
                 onToggleIntent={() => setShowIntent((v) => !v)}
+                analysisMode={analysisMode ? analysisMode : 'fixture'}
               />
             </div>
           )}

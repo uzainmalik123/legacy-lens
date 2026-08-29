@@ -1,0 +1,321 @@
+{
+  "feature_id": "feat-core-review-workspace",
+  "objective": "Build the primary Legacy Lens review workspace (UI + presentation only) that renders the canonical Meridian proposed change and its behavior-aware risk findings using deterministic fixture data from Features 1 and 2. No real analysis pipeline.",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "priority": "must",
+      "description": "Update app/layout.tsx: set <title> to 'Legacy Lens' and update the metadata description. Retain Geist font loading and existing structural className. No layout structure changes beyond metadata."
+    },
+    {
+      "id": "REQ-002",
+      "priority": "must",
+      "description": "Extend app/globals.css with Legacy Lens CSS custom properties: risk-level colors (--risk-high, --risk-medium, --risk-low, --risk-info, --risk-critical), surface tokens (--surface-1, --surface-2), --border-subtle, --text-primary, --text-muted. Register all in @theme inline block. Include dark-mode variants."
+    },
+    {
+      "id": "REQ-003",
+      "priority": "must",
+      "description": "Create lib/review-workspace/loader.ts. Must import the four Meridian fixture JSON files, parse each through its corresponding WireSchema (.parse()), map to domain model via existing wire-format mappers, and export getMeridianReviewSession(): { report: ReviewReport, contract: BehavioralContract, metadata: AnalysisMetadata }. No raw JSON access beyond the parse step. Fixture imports are the only direct fixture imports permitted; all UI components receive typed domain models."
+    },
+    {
+      "id": "REQ-004",
+      "priority": "must",
+      "description": "Create lib/review-workspace/diff.ts. Export a DiffFile type (filename: string, hunks: DiffHunk[]) and DiffHunk type (header: string, lines: DiffLine[]) and DiffLine type (type: 'context'|'added'|'removed', lineNumber: {before?: number, after?: number}, content: string). Export a MeridianDiff constant of type DiffFile encoding the MoneyUtils.java rounding change (DOWN removed, HALF_UP added) with at least 4 context lines on each side. Must NOT read from disk or parse a patch file at runtime."
+    },
+    {
+      "id": "REQ-005",
+      "priority": "must",
+      "description": "Replace app/page.tsx with the Legacy Lens review workspace. The page is a Server Component. It calls getMeridianReviewSession() and passes typed props to child components. Structure: ReviewHeader (top), then a horizontally split main area with DiffPane (left, ~50% width) and FindingsPane (right, ~50% width). No 'use client' at page level."
+    },
+    {
+      "id": "REQ-006",
+      "priority": "must",
+      "description": "Create app/components/ReviewHeader.tsx (Server Component). Must render: Legacy Lens wordmark text, repository name from metadata.repository, change target from metadata.targetRevision, affected file shortname (MoneyUtils.java), overall risk badge with semantic color from report.overallRisk, analysis status. Must be compact (≤ 48px tall on desktop). No hero section."
+    },
+    {
+      "id": "REQ-007",
+      "priority": "must",
+      "description": "Create app/components/DiffPane.tsx (Server Component). Must render DiffFile props: filename label, hunk header, all diff lines with line numbers (before/after columns), removed lines with red accent styling, added lines with green accent styling, context lines neutral. Token-level visual emphasis on RoundingMode.DOWN (removed) and RoundingMode.HALF_UP (added). Monospace font. No external diff library."
+    },
+    {
+      "id": "REQ-008",
+      "priority": "must",
+      "description": "Create app/components/FindingsPane.tsx ('use client'). Props: findings (ReviewFinding[]), contract (BehavioralContract), defaultSelectedIndex 0. Selected finding detail must show: severity badge (semantic color), title, behavior rule ID(s) with rule title from contract, summary, business impact, confidence (%, band label from confidenceLabel()), test coverage status ('uncovered' prominently styled as danger), evidence list (filename, symbol, line range, kind, excerpt), recommended action. No 'Generate Guardrail Test' button."
+    },
+    {
+      "id": "REQ-009",
+      "priority": "must",
+      "description": "Create lib/review-workspace/confidence.ts. Export formatConfidencePct(score: number): string (e.g. '96%') and confidenceBandLabel(level: ConfidenceLevel): string (e.g. 'High confidence'). Must import and call confidenceLabel() from lib/analysis/types.ts. Must not duplicate threshold logic."
+    },
+    {
+      "id": "REQ-010",
+      "priority": "must",
+      "description": "FindingsPane must resolve each finding.behaviorRuleIds entry against contract.rules to find the matching BehavioralRule and display rule.title alongside the rule ID. Neither finding title nor rule title may be hardcoded in the component."
+    },
+    {
+      "id": "REQ-011",
+      "priority": "must",
+      "description": "Evidence rendering in FindingsPane: for each BehavioralEvidence item, render a compact row with: last-two-segments of file path (full path in title for hover), symbol when present, line range formatted as 'L17–19' or 'L51' when present, kind as a text tag, excerpt in monospace (max 3 visible lines) when present. The DOWN/HALF_UP excerpt must not be truncated."
+    },
+    {
+      "id": "REQ-012",
+      "priority": "must",
+      "description": "testCoverage: 'uncovered' must render in a visually distinct danger state with label 'No characterization test' or 'Uncovered' plus explanatory note ('Existing tests do not catch this regression'). No 'Generate Guardrail Test' button."
+    },
+    {
+      "id": "REQ-013",
+      "priority": "must",
+      "description": "Update vitest.config.ts to add a second test environment for app/__tests__/**/*.test.tsx with happy-dom environment. Keep lib/**/__tests__/**/*.test.ts in node environment. Use vitest workspace projects pattern."
+    },
+    {
+      "id": "REQ-014",
+      "priority": "must",
+      "description": "Add to package.json devDependencies: @testing-library/react (^16), @testing-library/jest-dom (^6), happy-dom (^15). No runtime dependencies may be added. No other dev dependencies may be added."
+    },
+    {
+      "id": "REQ-015",
+      "priority": "must",
+      "description": "Create app/__tests__/review-workspace.test.tsx with exactly tests TEST-201 through TEST-210 as specified in the plan. All must pass."
+    }
+  ],
+  "non_requirements": [
+    "No real Bob analysis pipeline.",
+    "No repository scanning, Java parsing, or git diff generation.",
+    "No 'Generate Guardrail Test' button or action (Feature 4).",
+    "No Reveal Intent panel.",
+    "No Behavior Map or graph visualization.",
+    "No blast-radius visualization.",
+    "No loading/analysis-progress UI.",
+    "No chat, comments, auth, collaboration, settings, notifications.",
+    "No filter system, search, or keyboard shortcuts beyond native browser.",
+    "No API routes.",
+    "No database persistence.",
+    "No production deployment.",
+    "No runtime npm dependencies.",
+    "No second confidence threshold implementation.",
+    "Do not modify demo/legacy-billing/src/**, pom.xml, proposed-change.patch, PROPOSED_CHANGE.md.",
+    "Do not modify lib/analysis/types.ts, parser.ts, behavioral-contract.test.ts, meridian-sample-contract.json.",
+    "Do not modify lib/analysis/review.ts, intent.ts, blast-radius.ts, metadata.ts.",
+    "Do not modify any lib/analysis/fixtures/*.json file.",
+    "Do not modify lib/analysis/__tests__/data-foundation.test.ts."
+  ],
+  "allowed_paths": [
+    "app/page.tsx",
+    "app/layout.tsx",
+    "app/globals.css",
+    "app/components/ReviewHeader.tsx",
+    "app/components/DiffPane.tsx",
+    "app/components/FindingsPane.tsx",
+    "app/__tests__/review-workspace.test.tsx",
+    "lib/review-workspace/loader.ts",
+    "lib/review-workspace/diff.ts",
+    "lib/review-workspace/confidence.ts",
+    "vitest.config.ts",
+    "package.json"
+  ],
+  "forbidden_paths": [
+    "demo/legacy-billing/src/**",
+    "demo/legacy-billing/pom.xml",
+    "demo/legacy-billing/proposed-change.patch",
+    "demo/legacy-billing/PROPOSED_CHANGE.md",
+    "demo/legacy-billing/LEGACY_FIXTURE_SPEC.md",
+    "demo/legacy-billing/GROUND_TRUTH.md",
+    "demo/legacy-billing/ANALYSIS_SCOPE.md",
+    "lib/analysis/types.ts",
+    "lib/analysis/parser.ts",
+    "lib/analysis/__tests__/behavioral-contract.test.ts",
+    "lib/analysis/__tests__/data-foundation.test.ts",
+    "lib/analysis/fixtures/meridian-sample-contract.json",
+    "lib/analysis/fixtures/meridian-sample-review.json",
+    "lib/analysis/fixtures/meridian-sample-intent.json",
+    "lib/analysis/fixtures/meridian-sample-blast-radius.json",
+    "lib/analysis/fixtures/meridian-sample-metadata.json",
+    "lib/analysis/review.ts",
+    "lib/analysis/intent.ts",
+    "lib/analysis/blast-radius.ts",
+    "lib/analysis/metadata.ts",
+    ".env",
+    ".env.*"
+  ],
+  "expected_files": {
+    "created": [
+      "app/components/ReviewHeader.tsx",
+      "app/components/DiffPane.tsx",
+      "app/components/FindingsPane.tsx",
+      "app/__tests__/review-workspace.test.tsx",
+      "lib/review-workspace/loader.ts",
+      "lib/review-workspace/diff.ts",
+      "lib/review-workspace/confidence.ts"
+    ],
+    "modified": [
+      "app/page.tsx",
+      "app/layout.tsx",
+      "app/globals.css",
+      "vitest.config.ts",
+      "package.json"
+    ],
+    "deleted": []
+  },
+  "dependencies": {
+    "runtime": [],
+    "dev": [
+      "@testing-library/react@^16",
+      "@testing-library/jest-dom@^6",
+      "happy-dom@^15"
+    ]
+  },
+  "test_requirements": [
+    {
+      "id": "TEST-201",
+      "type": "component",
+      "description": "ReviewHeader renders repository name 'demo/legacy-billing'.",
+      "requirement_ref": "REQ-006"
+    },
+    {
+      "id": "TEST-202",
+      "type": "component",
+      "description": "ReviewHeader renders risk level 'high' (text or accessible label).",
+      "requirement_ref": "REQ-006"
+    },
+    {
+      "id": "TEST-203",
+      "type": "component",
+      "description": "DiffPane renders the text 'RoundingMode.DOWN' in a removed line.",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-204",
+      "type": "component",
+      "description": "DiffPane renders the text 'RoundingMode.HALF_UP' in an added line.",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-205",
+      "type": "component",
+      "description": "FindingsPane renders the F-001 finding title string.",
+      "requirement_ref": "REQ-008"
+    },
+    {
+      "id": "TEST-206",
+      "type": "component",
+      "description": "FindingsPane renders a severity indicator containing 'high'.",
+      "requirement_ref": "REQ-008"
+    },
+    {
+      "id": "TEST-207",
+      "type": "component",
+      "description": "FindingsPane confidence label is derived from confidenceLabel() — for confidence 0.96 the output contains 'High confidence'.",
+      "requirement_ref": "REQ-009"
+    },
+    {
+      "id": "TEST-208",
+      "type": "component",
+      "description": "FindingsPane renders a test-coverage indicator for 'uncovered' that contains 'characterization test' or 'Uncovered'.",
+      "requirement_ref": "REQ-012"
+    },
+    {
+      "id": "TEST-209",
+      "type": "component",
+      "description": "FindingsPane evidence list renders a row containing 'MoneyUtils.java'.",
+      "requirement_ref": "REQ-011"
+    },
+    {
+      "id": "TEST-210",
+      "type": "component",
+      "description": "FindingsPane renders 'BR-01' rule ID in the finding detail.",
+      "requirement_ref": "REQ-010"
+    }
+  ],
+  "security_requirements": [
+    {
+      "id": "SEC-001",
+      "description": "Fixture data flows through WireSchema.parse() before reaching any UI component. loader.ts enforces this. Components receive typed domain models only.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-002",
+      "description": "No user input is rendered. All content originates from deterministic fixture JSON parsed through Zod schemas.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-003",
+      "description": "No external URLs, no API calls, no network I/O in any component or loader. Pure static rendering.",
+      "category": "network"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-001",
+      "automated": true,
+      "description": "'npm test' exits 0: all prior tests (TEST-001–TEST-125) pass and all new tests (TEST-201–TEST-210) pass."
+    },
+    {
+      "id": "AC-002",
+      "automated": true,
+      "description": "'npm run lint' exits 0 with no new errors."
+    },
+    {
+      "id": "AC-003",
+      "automated": true,
+      "description": "'tsc --noEmit' exits 0."
+    },
+    {
+      "id": "AC-004",
+      "automated": true,
+      "description": "'npm run build' exits 0."
+    },
+    {
+      "id": "AC-005",
+      "automated": false,
+      "description": "Review workspace renders at localhost:3000 with header, split diff pane, findings pane."
+    },
+    {
+      "id": "AC-006",
+      "automated": false,
+      "description": "Diff shows RoundingMode.DOWN as removed line and RoundingMode.HALF_UP as added line with line numbers."
+    },
+    {
+      "id": "AC-007",
+      "automated": false,
+      "description": "BR-01 finding is the default-selected finding with severity 'high'."
+    },
+    {
+      "id": "AC-008",
+      "automated": false,
+      "description": "Business impact text is rendered (mentions overcharge, $0.01, billing cycle)."
+    },
+    {
+      "id": "AC-009",
+      "automated": false,
+      "description": "Confidence displays as 96% with 'High confidence' label."
+    },
+    {
+      "id": "AC-010",
+      "automated": false,
+      "description": "Test coverage state renders in a visually prominent danger state with 'Uncovered' or 'No characterization test'."
+    },
+    {
+      "id": "AC-011",
+      "automated": false,
+      "description": "Evidence items visible with filename, symbol, line range for the MoneyUtils.java change evidence."
+    },
+    {
+      "id": "AC-012",
+      "automated": true,
+      "description": "'git diff --name-only' shows no changes to demo/legacy-billing/**."
+    },
+    {
+      "id": "AC-013",
+      "automated": true,
+      "description": "confidenceLabel() from lib/analysis/types.ts is called by lib/review-workspace/confidence.ts (no duplicate threshold logic)."
+    }
+  ],
+  "change_budget": {
+    "files_changed": 12,
+    "lines_added": 650,
+    "lines_removed": 65
+  },
+  "iteration_limit": 10,
+  "status": "approved",
+  "approved_at": "2026-08-29T12:00:00Z"
+}

@@ -110,7 +110,7 @@ function FindingsList({
               key={finding.id}
               type="button"
               onClick={() => onSelect(idx)}
-              className="w-full text-left px-4 py-3 flex items-start gap-3 transition-colors"
+              className="w-full text-left px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer"
               style={{
                 background: isSelected
                   ? "var(--surface-3)"

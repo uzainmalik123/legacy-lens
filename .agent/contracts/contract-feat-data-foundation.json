@@ -1,0 +1,403 @@
+{
+  "feature_id": "feat-data-foundation",
+  "objective": "Complete the remaining canonical data contracts (Review, Intent, Blast Radius, Analysis Metadata) for the Legacy Lens P0 product so subsequent UI and analysis-pipeline features have stable, Zod-validated, snake_case → camelCase typed data to depend on.",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "priority": "must",
+      "description": "Define ReviewFinding with: id (string), severity (SeveritySchema — 'critical' | 'high' | 'medium' | 'low' | 'info'), title (string), summary (string), behaviorRuleIds (string[]), changedFile (string, optional), changedLines (optional number | [number, number] tuple, same line-range semantics as BehavioralEvidence.line), businessImpact (string), evidence (BehavioralEvidence[], min 0), confidence (number 0–1), testCoverage (TestCoverageStatus), recommendedAction (string). Export SeveritySchema, Severity, ReviewFindingSchema, ReviewFinding from lib/analysis/review.ts."
+    },
+    {
+      "id": "REQ-002",
+      "priority": "must",
+      "description": "Define ReviewReport with: analysisId (string), overallRisk (Severity), riskScore (optional integer 0–100), findings (ReviewFinding[], min 0), affectedBehaviorRuleIds (string[]). Export ReviewReportSchema, ReviewReport from lib/analysis/review.ts."
+    },
+    {
+      "id": "REQ-003",
+      "priority": "must",
+      "description": "Define and export ReviewReportWireSchema (snake_case, .passthrough()), ReviewReportWire (z.infer type), and reviewFromWireFormat(wire: ReviewReportWire): ReviewReport from lib/analysis/review.ts. Wire snake_case fields: analysis_id, overall_risk, risk_score, affected_behavior_rule_ids; finding fields: behavior_rule_ids, changed_file, changed_lines, business_impact, test_coverage, recommended_action."
+    },
+    {
+      "id": "REQ-004",
+      "priority": "must",
+      "description": "Define RevealIntent with: analysisId (string), targetSymbol (string), targetFile (string), businessRole (string), summary (string), invariants (string[]), relatedBehaviorRuleIds (string[]), dependencies (string[]), evidence (BehavioralEvidence[]), confidence (number 0–1). Export RevealIntentSchema, RevealIntent from lib/analysis/intent.ts."
+    },
+    {
+      "id": "REQ-005",
+      "priority": "must",
+      "description": "Define and export RevealIntentWireSchema (snake_case, .passthrough()), RevealIntentWire (z.infer type), and intentFromWireFormat(wire: RevealIntentWire): RevealIntent from lib/analysis/intent.ts. Wire snake_case fields: analysis_id, target_symbol, target_file, business_role, related_behavior_rule_ids."
+    },
+    {
+      "id": "REQ-006",
+      "priority": "must",
+      "description": "Define BlastRadiusNodeKind as 'changed_symbol' | 'behavior_rule' | 'function' | 'service' | 'test'. Define BlastRadiusNode with: id (string), label (string), kind (BlastRadiusNodeKind), file (string, optional), symbol (string, optional). Export BlastRadiusNodeKindSchema, BlastRadiusNodeKind, BlastRadiusNodeSchema, BlastRadiusNode from lib/analysis/blast-radius.ts."
+    },
+    {
+      "id": "REQ-007",
+      "priority": "must",
+      "description": "Define BlastRadiusRelationship as 'calls' | 'implements' | 'tested_by' | 'affects_rule' | 'downstream_of'. Define BlastRadiusEdge with: source (string), target (string), relationship (BlastRadiusRelationship). Export BlastRadiusRelationshipSchema, BlastRadiusRelationship, BlastRadiusEdgeSchema, BlastRadiusEdge from lib/analysis/blast-radius.ts."
+    },
+    {
+      "id": "REQ-008",
+      "priority": "must",
+      "description": "Define BlastRadiusResult with: analysisId (string), rootChange (string), nodes (BlastRadiusNode[], min 1), edges (BlastRadiusEdge[], min 0), affectedBehaviorRuleIds (string[]). Define and export BlastRadiusResultWireSchema (snake_case, .passthrough()), BlastRadiusResultWire (z.infer type), blastRadiusFromWireFormat(wire: BlastRadiusResultWire): BlastRadiusResult, BlastRadiusResultSchema, BlastRadiusResult from lib/analysis/blast-radius.ts. Wire snake_case: analysis_id, root_change, affected_behavior_rule_ids."
+    },
+    {
+      "id": "REQ-009",
+      "priority": "must",
+      "description": "Define AnalysisStage as 'preparing' | 'investigating' | 'extracting_intent' | 'analyzing_tests' | 'mapping_impact' | 'reviewing_change' | 'validating_evidence' | 'generating_tests' | 'complete' | 'failed'. Define AnalysisStatus as 'idle' | 'running' | 'complete' | 'failed'. Export AnalysisStageSchema, AnalysisStage, AnalysisStatusSchema, AnalysisStatus from lib/analysis/metadata.ts."
+    },
+    {
+      "id": "REQ-010",
+      "priority": "must",
+      "description": "Define AnalysisMetadata with: analysisId (string), repository (string), baseRevision (string), targetRevision (string), startedAt (z.string().datetime()), completedAt (z.string().datetime(), optional), durationMs (z.number().int().min(0), optional), status (AnalysisStatus), currentStage (AnalysisStage, optional), filesInspected (z.number().int().min(0)), functionsTraced (z.number().int().min(0)), behaviorRulesDiscovered (z.number().int().min(0)), affectedBehaviorRules (z.number().int().min(0)), untestedAffectedRules (z.number().int().min(0)), highRiskFindings (z.number().int().min(0)), generatedTests (z.number().int().min(0)). Export AnalysisMetadataSchema, AnalysisMetadata from lib/analysis/metadata.ts."
+    },
+    {
+      "id": "REQ-011",
+      "priority": "must",
+      "description": "Define and export AnalysisMetadataWireSchema (snake_case, .passthrough()), AnalysisMetadataWire (z.infer type), and metadataFromWireFormat(wire: AnalysisMetadataWire): AnalysisMetadata from lib/analysis/metadata.ts. Wire snake_case fields: analysis_id, base_revision, target_revision, started_at, completed_at, duration_ms, current_stage, files_inspected, functions_traced, behavior_rules_discovered, affected_behavior_rules, untested_affected_rules, high_risk_findings, generated_tests."
+    },
+    {
+      "id": "REQ-012",
+      "priority": "must",
+      "description": "No new runtime or dev dependencies. Zod 4.4.3 and vitest ^4.1.11 are already installed. No other dependency may be added."
+    },
+    {
+      "id": "REQ-013",
+      "priority": "must",
+      "description": "The frozen paths demo/legacy-billing/src/**, demo/legacy-billing/pom.xml, demo/legacy-billing/proposed-change.patch, demo/legacy-billing/PROPOSED_CHANGE.md, demo/legacy-billing/LEGACY_FIXTURE_SPEC.md, demo/legacy-billing/GROUND_TRUTH.md, demo/legacy-billing/ANALYSIS_SCOPE.md must not be modified. Existing Feature 1 files lib/analysis/types.ts, lib/analysis/parser.ts, lib/analysis/__tests__/behavioral-contract.test.ts, and lib/analysis/fixtures/meridian-sample-contract.json must not be modified."
+    },
+    {
+      "id": "REQ-014",
+      "priority": "must",
+      "description": "Produce lib/analysis/fixtures/meridian-sample-review.json — development-only snake_case ReviewReport fixture. Must include _fixture_note key, analysis_id 'meridian-sample-20260829', overall_risk 'high', exactly one finding with id 'F-001' severity 'high' referencing BR-01 and the MoneyUtils.java rounding change, and pass ReviewReportWireSchema.safeParse()."
+    },
+    {
+      "id": "REQ-015",
+      "priority": "must",
+      "description": "Produce lib/analysis/fixtures/meridian-sample-intent.json — development-only snake_case RevealIntent fixture targeting LateFeeService.calculateLateFee. Must include _fixture_note key, analysis_id 'meridian-sample-20260829', related_behavior_rule_ids referencing 'BR-01', and pass RevealIntentWireSchema.safeParse()."
+    },
+    {
+      "id": "REQ-016",
+      "priority": "must",
+      "description": "Produce lib/analysis/fixtures/meridian-sample-blast-radius.json — development-only snake_case BlastRadiusResult fixture rooted at MoneyUtils.roundLateFee. Must include _fixture_note key, analysis_id 'meridian-sample-20260829', at least 4 nodes, at least 3 edges, affected_behavior_rule_ids referencing 'BR-01', and pass BlastRadiusResultWireSchema.safeParse()."
+    },
+    {
+      "id": "REQ-017",
+      "priority": "must",
+      "description": "Produce lib/analysis/fixtures/meridian-sample-metadata.json — development-only snake_case AnalysisMetadata fixture. Must include _fixture_note key, analysis_id 'meridian-sample-20260829', status 'complete', current_stage 'complete', and pass AnalysisMetadataWireSchema.safeParse()."
+    },
+    {
+      "id": "REQ-018",
+      "priority": "must",
+      "description": "Write exactly 25 unit tests TEST-101 through TEST-125 in lib/analysis/__tests__/data-foundation.test.ts using the installed Vitest setup. Tests must cover: valid parsing, missing required field rejections, invalid enum rejections, snake_case→camelCase mapper correctness, fixture validation, and blast-radius edge integrity. See plan section for full test list."
+    }
+  ],
+  "non_requirements": [
+    "No UI components, pages, or Next.js routes.",
+    "No API routes.",
+    "No database persistence.",
+    "No analysis pipeline, diff parsing, or Java source parsing.",
+    "No git integration.",
+    "No authentication or authorization.",
+    "No risk scoring engine or computation logic.",
+    "No graph library.",
+    "No generated guardrail test types (separate feature).",
+    "Fixtures are development fixture data only — not analysis agent output.",
+    "Do not modify lib/analysis/types.ts or lib/analysis/parser.ts.",
+    "Do not modify lib/analysis/__tests__/behavioral-contract.test.ts.",
+    "Do not modify lib/analysis/fixtures/meridian-sample-contract.json.",
+    "No lib/analysis/index.ts barrel file.",
+    "No schema version fields.",
+    "No riskScore calculation or validation of computation provenance.",
+    "No cross-field validation between untestedAffectedRules and affectedBehaviorRules.",
+    "No Reveal Intent UI.",
+    "No Blast Radius visualization.",
+    "No Behavior Map UI."
+  ],
+  "allowed_paths": [
+    "lib/analysis/review.ts",
+    "lib/analysis/intent.ts",
+    "lib/analysis/blast-radius.ts",
+    "lib/analysis/metadata.ts",
+    "lib/analysis/fixtures/meridian-sample-review.json",
+    "lib/analysis/fixtures/meridian-sample-intent.json",
+    "lib/analysis/fixtures/meridian-sample-blast-radius.json",
+    "lib/analysis/fixtures/meridian-sample-metadata.json",
+    "lib/analysis/__tests__/data-foundation.test.ts"
+  ],
+  "forbidden_paths": [
+    "demo/legacy-billing/src/**",
+    "demo/legacy-billing/pom.xml",
+    "demo/legacy-billing/proposed-change.patch",
+    "demo/legacy-billing/PROPOSED_CHANGE.md",
+    "demo/legacy-billing/LEGACY_FIXTURE_SPEC.md",
+    "demo/legacy-billing/GROUND_TRUTH.md",
+    "demo/legacy-billing/ANALYSIS_SCOPE.md",
+    "lib/analysis/types.ts",
+    "lib/analysis/parser.ts",
+    "lib/analysis/__tests__/behavioral-contract.test.ts",
+    "lib/analysis/fixtures/meridian-sample-contract.json",
+    "app/**",
+    ".env",
+    ".env.*"
+  ],
+  "expected_files": {
+    "created": [
+      "lib/analysis/review.ts",
+      "lib/analysis/intent.ts",
+      "lib/analysis/blast-radius.ts",
+      "lib/analysis/metadata.ts",
+      "lib/analysis/fixtures/meridian-sample-review.json",
+      "lib/analysis/fixtures/meridian-sample-intent.json",
+      "lib/analysis/fixtures/meridian-sample-blast-radius.json",
+      "lib/analysis/fixtures/meridian-sample-metadata.json",
+      "lib/analysis/__tests__/data-foundation.test.ts"
+    ],
+    "modified": [],
+    "deleted": []
+  },
+  "dependencies": {
+    "runtime": [],
+    "dev": []
+  },
+  "test_requirements": [
+    {
+      "id": "TEST-101",
+      "type": "unit",
+      "description": "A fully valid ReviewReport (with one finding) passes ReviewReportSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-102",
+      "type": "unit",
+      "description": "A ReviewFinding with severity 'urgent' (not a valid severity value) fails ReviewFindingSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-001"
+    },
+    {
+      "id": "TEST-103",
+      "type": "unit",
+      "description": "A ReviewReport missing the required 'findings' array fails ReviewReportSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-104",
+      "type": "unit",
+      "description": "A ReviewReport missing the required 'analysisId' field fails ReviewReportSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-105",
+      "type": "unit",
+      "description": "reviewFromWireFormat() maps a valid snake_case wire object to a ReviewReport with camelCase fields (e.g. analysis_id → analysisId, behavior_rule_ids → behaviorRuleIds, overall_risk → overallRisk).",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-106",
+      "type": "unit",
+      "description": "A valid snake_case wire-format review object passes ReviewReportWireSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-107",
+      "type": "unit",
+      "description": "The meridian-sample-review.json fixture (imported as JSON) passes ReviewReportWireSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-014"
+    },
+    {
+      "id": "TEST-108",
+      "type": "unit",
+      "description": "A fully valid RevealIntent object passes RevealIntentSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-109",
+      "type": "unit",
+      "description": "A RevealIntent missing the required 'targetSymbol' field fails RevealIntentSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-110",
+      "type": "unit",
+      "description": "intentFromWireFormat() maps a valid snake_case wire object to a RevealIntent with camelCase fields (e.g. analysis_id → analysisId, target_symbol → targetSymbol, related_behavior_rule_ids → relatedBehaviorRuleIds).",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-111",
+      "type": "unit",
+      "description": "The meridian-sample-intent.json fixture (imported as JSON) passes RevealIntentWireSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-015"
+    },
+    {
+      "id": "TEST-112",
+      "type": "unit",
+      "description": "A fully valid BlastRadiusResult (with at least one node and one edge) passes BlastRadiusResultSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-008"
+    },
+    {
+      "id": "TEST-113",
+      "type": "unit",
+      "description": "A BlastRadiusResult missing the required 'nodes' field fails BlastRadiusResultSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-008"
+    },
+    {
+      "id": "TEST-114",
+      "type": "unit",
+      "description": "A BlastRadiusEdge with relationship 'related_to' (not a valid relationship value) fails BlastRadiusEdgeSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-115",
+      "type": "unit",
+      "description": "blastRadiusFromWireFormat() maps a valid snake_case wire object to a BlastRadiusResult with camelCase fields (e.g. analysis_id → analysisId, root_change → rootChange, affected_behavior_rule_ids → affectedBehaviorRuleIds).",
+      "requirement_ref": "REQ-008"
+    },
+    {
+      "id": "TEST-116",
+      "type": "unit",
+      "description": "The meridian-sample-blast-radius.json fixture (imported as JSON) passes BlastRadiusResultWireSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-016"
+    },
+    {
+      "id": "TEST-117",
+      "type": "unit",
+      "description": "A fully valid AnalysisMetadata object passes AnalysisMetadataSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-010"
+    },
+    {
+      "id": "TEST-118",
+      "type": "unit",
+      "description": "An AnalysisMetadata with filesInspected: -1 (negative integer) fails AnalysisMetadataSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-010"
+    },
+    {
+      "id": "TEST-119",
+      "type": "unit",
+      "description": "An AnalysisMetadata with status: 'pending' (not a valid AnalysisStatus value) fails AnalysisMetadataSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-010"
+    },
+    {
+      "id": "TEST-120",
+      "type": "unit",
+      "description": "An AnalysisMetadata with currentStage: 'scanning' (not a valid AnalysisStage value) fails AnalysisMetadataSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-009"
+    },
+    {
+      "id": "TEST-121",
+      "type": "unit",
+      "description": "metadataFromWireFormat() maps a valid snake_case wire object to an AnalysisMetadata with camelCase fields (e.g. analysis_id → analysisId, files_inspected → filesInspected, behavior_rules_discovered → behaviorRulesDiscovered).",
+      "requirement_ref": "REQ-011"
+    },
+    {
+      "id": "TEST-122",
+      "type": "unit",
+      "description": "The meridian-sample-metadata.json fixture (imported as JSON) passes AnalysisMetadataWireSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-017"
+    },
+    {
+      "id": "TEST-123",
+      "type": "unit",
+      "description": "SeveritySchema.safeParse('urgent') returns success: false.",
+      "requirement_ref": "REQ-001"
+    },
+    {
+      "id": "TEST-124",
+      "type": "unit",
+      "description": "AnalysisStageSchema.safeParse('scanning') returns success: false.",
+      "requirement_ref": "REQ-009"
+    },
+    {
+      "id": "TEST-125",
+      "type": "unit",
+      "description": "For each edge in meridian-sample-blast-radius.json, both edge.source and edge.target must match an id in the fixture's nodes array. The test fails if any edge references an undeclared node id.",
+      "requirement_ref": "REQ-016"
+    }
+  ],
+  "security_requirements": [
+    {
+      "id": "SEC-001",
+      "description": "All runtime input passed to fromWireFormat() functions must first pass through the corresponding WireSchema.safeParse() or .parse() before any field is accessed. No raw 'as' type assertions on untrusted input are permitted.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-002",
+      "description": "No .env files or credentials are read by any file in this feature. This feature is pure data modeling with no I/O beyond in-memory validation.",
+      "category": "configuration"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-001",
+      "automated": true,
+      "description": "'npm test' (vitest run) exits 0 with all tests passing — including all 20 existing Feature 1 tests and all 25 new tests (TEST-101 through TEST-125). No failures, no skipped tests."
+    },
+    {
+      "id": "AC-002",
+      "automated": true,
+      "description": "'npm run lint' exits 0 with no new lint errors introduced by this feature."
+    },
+    {
+      "id": "AC-003",
+      "automated": true,
+      "description": "'tsc --noEmit' exits 0 with no new TypeScript type errors."
+    },
+    {
+      "id": "AC-004",
+      "automated": true,
+      "description": "'npm run build' exits 0."
+    },
+    {
+      "id": "AC-005",
+      "automated": true,
+      "description": "SeveritySchema, Severity, ReviewFindingSchema, ReviewFinding, ReviewReportSchema, ReviewReport, ReviewReportWire, ReviewReportWireSchema, and reviewFromWireFormat are named exports of lib/analysis/review.ts."
+    },
+    {
+      "id": "AC-006",
+      "automated": true,
+      "description": "RevealIntentSchema, RevealIntent, RevealIntentWire, RevealIntentWireSchema, and intentFromWireFormat are named exports of lib/analysis/intent.ts."
+    },
+    {
+      "id": "AC-007",
+      "automated": true,
+      "description": "BlastRadiusNodeKindSchema, BlastRadiusNodeKind, BlastRadiusNodeSchema, BlastRadiusNode, BlastRadiusRelationshipSchema, BlastRadiusRelationship, BlastRadiusEdgeSchema, BlastRadiusEdge, BlastRadiusResultSchema, BlastRadiusResult, BlastRadiusResultWire, BlastRadiusResultWireSchema, and blastRadiusFromWireFormat are named exports of lib/analysis/blast-radius.ts."
+    },
+    {
+      "id": "AC-008",
+      "automated": true,
+      "description": "AnalysisStageSchema, AnalysisStage, AnalysisStatusSchema, AnalysisStatus, AnalysisMetadataSchema, AnalysisMetadata, AnalysisMetadataWire, AnalysisMetadataWireSchema, and metadataFromWireFormat are named exports of lib/analysis/metadata.ts."
+    },
+    {
+      "id": "AC-009",
+      "automated": true,
+      "description": "All four Meridian fixtures exist as valid JSON files and each contains a _fixture_note key."
+    },
+    {
+      "id": "AC-010",
+      "automated": true,
+      "description": "meridian-sample-review.json has exactly 1 finding with id 'F-001', severity 'high', and behavior_rule_ids containing 'BR-01'."
+    },
+    {
+      "id": "AC-011",
+      "automated": true,
+      "description": "All four Meridian fixtures have analysis_id equal to 'meridian-sample-20260829'."
+    },
+    {
+      "id": "AC-012",
+      "automated": true,
+      "description": "'git diff --name-only' shows no files modified under demo/legacy-billing/."
+    },
+    {
+      "id": "AC-013",
+      "automated": true,
+      "description": "lib/analysis/types.ts, lib/analysis/parser.ts, lib/analysis/__tests__/behavioral-contract.test.ts, and lib/analysis/fixtures/meridian-sample-contract.json are not modified (git diff shows no changes to these files)."
+    }
+  ],
+  "change_budget": {
+    "files_changed": 9,
+    "lines_added": 750,
+    "lines_removed": 0
+  },
+  "iteration_limit": 10,
+  "status": "approved",
+  "approved_at": "2026-08-29T00:00:00Z"
+}

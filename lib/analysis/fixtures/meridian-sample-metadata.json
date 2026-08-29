@@ -1,0 +1,19 @@
+{
+  "_fixture_note": "DEVELOPMENT FIXTURE — not analysis agent output. Do not use as pipeline output.",
+  "analysis_id": "meridian-sample-20260829",
+  "repository": "demo/legacy-billing",
+  "base_revision": "main",
+  "target_revision": "proposed-change",
+  "started_at": "2026-08-29T00:00:00Z",
+  "completed_at": "2026-08-29T00:00:38Z",
+  "duration_ms": 38000,
+  "status": "complete",
+  "current_stage": "complete",
+  "files_inspected": 14,
+  "functions_traced": 23,
+  "behavior_rules_discovered": 6,
+  "affected_behavior_rules": 1,
+  "untested_affected_rules": 1,
+  "high_risk_findings": 1,
+  "generated_tests": 1
+}

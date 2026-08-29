@@ -1,0 +1,55 @@
+{
+  "workflow_id": "implementation",
+  "feature_id": "feat-data-foundation",
+  "iteration": 1,
+  "timestamp": "2026-08-29T10:25:29Z",
+  "overall_status": "pass",
+  "checks": [
+    {
+      "name": "lint",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": "PASS: lint"
+    },
+    {
+      "name": "typecheck",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": "PASS: typecheck"
+    },
+    {
+      "name": "test",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": 163,
+      "output_summary": "Test Files 2 passed (2) | Tests 45 passed (45)"
+    },
+    {
+      "name": "build",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": "PASS: build"
+    }
+  ],
+  "findings": [],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": null,
+    "changed_files": [
+      "lib/analysis/review.ts",
+      "lib/analysis/intent.ts",
+      "lib/analysis/blast-radius.ts",
+      "lib/analysis/metadata.ts",
+      "lib/analysis/fixtures/meridian-sample-review.json",
+      "lib/analysis/fixtures/meridian-sample-intent.json",
+      "lib/analysis/fixtures/meridian-sample-blast-radius.json",
+      "lib/analysis/fixtures/meridian-sample-metadata.json",
+      "lib/analysis/__tests__/data-foundation.test.ts"
+    ],
+    "contract_path": ".agent/contracts/contract-feat-data-foundation.json",
+    "previous_report": null
+  }
+}

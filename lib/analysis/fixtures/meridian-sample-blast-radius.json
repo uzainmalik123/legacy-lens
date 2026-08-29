@@ -1,0 +1,80 @@
+{
+  "_fixture_note": "DEVELOPMENT FIXTURE — not analysis agent output. Do not use as pipeline output.",
+  "analysis_id": "meridian-sample-20260829",
+  "root_change": "MoneyUtils.roundLateFee",
+  "nodes": [
+    {
+      "id": "node-round-late-fee",
+      "label": "MoneyUtils.roundLateFee()",
+      "kind": "changed_symbol",
+      "file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/MoneyUtils.java",
+      "symbol": "MoneyUtils.roundLateFee"
+    },
+    {
+      "id": "node-br-01",
+      "label": "BR-01: Late-fee rounding rule",
+      "kind": "behavior_rule"
+    },
+    {
+      "id": "node-calculate-late-fee",
+      "label": "LateFeeService.calculateLateFee()",
+      "kind": "function",
+      "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/LateFeeService.java",
+      "symbol": "LateFeeService.calculateLateFee"
+    },
+    {
+      "id": "node-billing-service",
+      "label": "BillingService.runCycle()",
+      "kind": "service",
+      "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/BillingService.java",
+      "symbol": "BillingService.runCycle"
+    },
+    {
+      "id": "node-collections-policy",
+      "label": "CollectionsPolicy.isEligible()",
+      "kind": "function",
+      "file": "demo/legacy-billing/src/main/java/com/meridian/billing/policy/CollectionsPolicy.java",
+      "symbol": "CollectionsPolicy.isEligible"
+    },
+    {
+      "id": "node-late-fee-test",
+      "label": "LateFeeServiceTest",
+      "kind": "test",
+      "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+      "symbol": "LateFeeServiceTest"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node-round-late-fee",
+      "target": "node-br-01",
+      "relationship": "affects_rule"
+    },
+    {
+      "source": "node-calculate-late-fee",
+      "target": "node-round-late-fee",
+      "relationship": "calls"
+    },
+    {
+      "source": "node-billing-service",
+      "target": "node-calculate-late-fee",
+      "relationship": "calls"
+    },
+    {
+      "source": "node-billing-service",
+      "target": "node-collections-policy",
+      "relationship": "calls"
+    },
+    {
+      "source": "node-calculate-late-fee",
+      "target": "node-billing-service",
+      "relationship": "downstream_of"
+    },
+    {
+      "source": "node-late-fee-test",
+      "target": "node-calculate-late-fee",
+      "relationship": "tested_by"
+    }
+  ],
+  "affected_behavior_rule_ids": ["BR-01"]
+}

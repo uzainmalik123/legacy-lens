@@ -1,0 +1,38 @@
+{
+  "_fixture_note": "DEVELOPMENT FIXTURE — not analysis agent output. Do not use as pipeline output.",
+  "analysis_id": "meridian-sample-20260829",
+  "overall_risk": "high",
+  "risk_score": 82,
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "high",
+      "title": "Late-fee rounding mode changed — customers may be overcharged",
+      "summary": "The proposed change switches MoneyUtils.roundLateFee() from RoundingMode.DOWN to RoundingMode.HALF_UP. This silently alters the rounding behaviour for all late fees in the billing cycle.",
+      "behavior_rule_ids": ["BR-01"],
+      "changed_file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/MoneyUtils.java",
+      "changed_lines": [17, 19],
+      "business_impact": "Customers will be charged up to $0.01 more per late fee whenever the third decimal digit of (outstandingBalance × 0.00823) is ≥ 5. At scale across all accounts in a billing cycle this is a systematic overcharge that is not visible in any existing test.",
+      "evidence": [
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/MoneyUtils.java",
+          "symbol": "MoneyUtils.roundLateFee",
+          "line": [17, 19],
+          "excerpt": "-        return value.setScale(2, RoundingMode.DOWN);\n+        return value.setScale(2, RoundingMode.HALF_UP);",
+          "kind": "change"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.standardLateFeeCalculation",
+          "line": [100, 106],
+          "excerpt": "// balance=1000.00, rate=0.00823 → raw fee=8.230 → DOWN=8.23, HALF_UP=8.23 (same result at this value — test does not catch the regression)",
+          "kind": "test"
+        }
+      ],
+      "confidence": 0.96,
+      "test_coverage": "uncovered",
+      "recommended_action": "Revert the rounding mode change in MoneyUtils.roundLateFee() to RoundingMode.DOWN. Add a characterization test using a balance where the third decimal of (balance × 0.00823) is ≥ 5 (e.g. balance=1234.56) to detect future regressions."
+    }
+  ],
+  "affected_behavior_rule_ids": ["BR-01"]
+}

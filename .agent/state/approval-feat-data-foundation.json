@@ -1,0 +1,9 @@
+{
+  "feature_id": "feat-data-foundation",
+  "status": "approved",
+  "approved_by": "human",
+  "approved_at": "2026-08-29T00:00:00Z",
+  "plan_file": ".agent/plans/plan-feat-data-foundation.md",
+  "contract_file": ".agent/contracts/contract-feat-data-foundation.json",
+  "notes": "Human approval via /approve-plan command."
+}

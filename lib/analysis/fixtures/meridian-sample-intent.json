@@ -1,0 +1,45 @@
+{
+  "_fixture_note": "DEVELOPMENT FIXTURE — not analysis agent output. Do not use as pipeline output.",
+  "analysis_id": "meridian-sample-20260829",
+  "target_symbol": "LateFeeService.calculateLateFee",
+  "target_file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/LateFeeService.java",
+  "business_role": "Computes the late fee charged to a billing account for a single cycle. Applies the base rate, adds an escalation penalty for accounts more than 30 effective days late, enforces the hardship cap for eligible customers, and returns zero for accounts with no outstanding balance.",
+  "summary": "LateFeeService.calculateLateFee() is the authoritative entry point for all late-fee computation in the Meridian billing system. It orchestrates four distinct rules: (1) zero-balance guard, (2) grace-period effective-days calculation, (3) optional fixed-penalty escalation, and (4) hardship cap application. The rounding of the raw fee is delegated to MoneyUtils.roundLateFee(), which uses RoundingMode.DOWN — the proposed change alters this to HALF_UP.",
+  "invariants": [
+    "Zero or negative outstanding balance always produces a zero late fee, regardless of days late.",
+    "Grace-eligible accounts have 7 days subtracted from rawDaysLate before any threshold is evaluated.",
+    "The $15.00 fixed penalty is added only when effectiveDaysLate strictly exceeds 30.",
+    "Hardship-plan customers are never charged more than $25.00, regardless of outstanding balance.",
+    "All rounding is applied after the penalty is added and before the hardship cap is evaluated."
+  ],
+  "related_behavior_rule_ids": ["BR-01", "BR-02", "BR-03", "BR-04", "BR-05"],
+  "dependencies": [
+    "com.meridian.billing.util.MoneyUtils",
+    "com.meridian.billing.policy.GracePeriodPolicy",
+    "com.meridian.billing.policy.HardshipPolicy",
+    "com.meridian.billing.billing.BillingConstants",
+    "com.meridian.billing.model.BillingAccount"
+  ],
+  "evidence": [
+    {
+      "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/LateFeeService.java",
+      "symbol": "LateFeeService.calculateLateFee",
+      "line": [27, 55],
+      "kind": "source"
+    },
+    {
+      "file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/MoneyUtils.java",
+      "symbol": "MoneyUtils.roundLateFee",
+      "line": [17, 19],
+      "excerpt": "return value.setScale(2, RoundingMode.DOWN);",
+      "kind": "dependency"
+    },
+    {
+      "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+      "symbol": "LateFeeServiceTest",
+      "line": [1, 120],
+      "kind": "test"
+    }
+  ],
+  "confidence": 0.95
+}

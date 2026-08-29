@@ -84,3 +84,18 @@ Tell the user:
 - What changed as a result of the grill
 - Any unresolved risks that require their attention
 - That they should run `/approve-plan` once satisfied
+
+### Hackathon fast mode:
+
+Maximum 2 BLOCKING questions.
+
+Only ask if the answer materially changes architecture, product behavior, security, or demo outcome.
+
+Resolve all medium/low-level implementation decisions yourself using:
+1. LEGACY_LENS_PRD.md
+2. existing repository conventions
+3. simplest implementation
+
+Do not use subagents unless they provide clear parallel value.
+Do not perform broad exploratory research when repository inspection is enough.
+Optimize Bob usage for shipping the P0 demo.

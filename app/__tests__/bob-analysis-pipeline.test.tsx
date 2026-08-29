@@ -36,14 +36,14 @@ describe("ReviewHeader analysisMode badge", () => {
 
   it("TEST-614: renders LIVE BOB ANALYSIS when analysisMode is 'live'", () => {
     renderHeader("live");
-    const badge = screen.getByText(/live bob analysis/i);
+    const badge = screen.getByLabelText(/analysis mode: live bob analysis/i);
     expect(badge).toBeDefined();
   });
 
   // TEST-615
   it("TEST-615: renders DEVELOPMENT FIXTURE when analysisMode is 'fixture'", () => {
     renderHeader("fixture");
-    const badge = screen.getByText(/development fixture/i);
+    const badge = screen.getByLabelText(/analysis mode: development fixture/i);
     expect(badge).toBeDefined();
   });
 
@@ -80,7 +80,7 @@ describe("ReviewWorkspace", () => {
   // TEST-615 via ReviewWorkspace: starts in fixture mode
   it("renders DEVELOPMENT FIXTURE badge on initial load", () => {
     renderWorkspace();
-    const badge = screen.getByText(/development fixture/i);
+    const badge = screen.getByLabelText(/analysis mode: development fixture/i);
     expect(badge).toBeDefined();
   });
 
@@ -103,7 +103,12 @@ describe("ReviewWorkspace", () => {
 
     // Button becomes disabled when in-flight (aria-label stays "Analyze Change")
     // Use findByRole with hidden:false to wait for React to re-render
-    const disabledButton = await screen.findByRole("button", { name: /analyze change|analyzing/i });
-    expect((disabledButton as HTMLButtonElement).disabled).toBe(true);
+    expect(
+  await screen.findByText(/^analyzing$/i)
+).toBeDefined();
+
+expect(
+  screen.queryByRole("button", { name: /analyze change/i })
+).toBeNull();
   });
 });

@@ -1,7 +1,11 @@
+"use client";
 // ---------------------------------------------------------------------------
-// app/components/ReviewHeader.tsx — Server Component
+// app/components/ReviewHeader.tsx — Client Component
 // Compact workspace header: Legacy Lens identity + review context.
 // Max height 48px on desktop. Not a hero section.
+//
+// REQ-007: analysisMode prop renders LIVE BOB ANALYSIS / DEVELOPMENT FIXTURE badge.
+// The ANALYZE CHANGE button is rendered here and forwarded via onAnalyze.
 // ---------------------------------------------------------------------------
 
 import type { ReviewReport } from "@/lib/analysis/review";
@@ -12,6 +16,12 @@ interface ReviewHeaderProps {
   metadata: AnalysisMetadata;
   /** Shortened filename to display in the header (e.g. "MoneyUtils.java") */
   changedFile: string;
+  /** Whether the current result is live Bob output or the development fixture */
+  analysisMode?: "fixture" | "live";
+  /** Called when the user clicks ANALYZE CHANGE */
+  onAnalyze?: () => void;
+  /** Disables the ANALYZE CHANGE button during in-flight requests */
+  analyzeDisabled?: boolean;
 }
 
 function riskColor(severity: ReviewReport["overallRisk"]): string {
@@ -44,6 +54,9 @@ export default function ReviewHeader({
   report,
   metadata,
   changedFile,
+  analysisMode,
+  onAnalyze,
+  analyzeDisabled = false,
 }: ReviewHeaderProps) {
   return (
     <header
@@ -137,8 +150,53 @@ export default function ReviewHeader({
         </div>
       </div>
 
-      {/* Right: Risk + status */}
+      {/* Right: mode badge + analyze button + risk */}
       <div className="flex items-center gap-3 px-4 h-full shrink-0">
+        {/* Analysis mode badge — REQ-007 */}
+        {analysisMode === "live" && (
+          <span
+            className="text-xs font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest shrink-0"
+            style={{
+              color: "var(--risk-info)",
+              background: "var(--risk-info-bg)",
+              border: "1px solid var(--risk-info)",
+            }}
+            aria-label="Analysis mode: live Bob analysis"
+          >
+            LIVE BOB ANALYSIS
+          </span>
+        )}
+        {analysisMode === "fixture" && (
+          <span
+            className="text-xs font-medium px-2 py-0.5 rounded-sm uppercase tracking-widest shrink-0"
+            style={{
+              color: "var(--text-muted)",
+              background: "var(--surface-3)",
+              border: "1px solid var(--border-muted)",
+            }}
+            aria-label="Analysis mode: development fixture"
+          >
+            DEVELOPMENT FIXTURE
+          </span>
+        )}
+
+        {/* ANALYZE CHANGE button — REQ-006 */}
+        {onAnalyze && (
+          <button
+            onClick={onAnalyze}
+            disabled={analyzeDisabled}
+            className="text-xs font-semibold px-3 py-1 rounded-sm uppercase tracking-widest shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              color: "var(--text-primary)",
+              background: analyzeDisabled ? "var(--surface-3)" : "var(--risk-high-bg)",
+              border: `1px solid ${analyzeDisabled ? "var(--border-muted)" : "var(--risk-high)"}`,
+            }}
+            aria-label="Analyze Change"
+          >
+            {analyzeDisabled ? "Analyzing…" : "Analyze Change"}
+          </button>
+        )}
+
         {/* Status */}
         <span
           className="text-xs font-medium"

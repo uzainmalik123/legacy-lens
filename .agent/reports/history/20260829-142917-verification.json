@@ -1,0 +1,53 @@
+{
+  "workflow_id": "verification",
+  "feature_id": "feat-behavioral-contract-model",
+  "iteration": 3,
+  "timestamp": "2026-08-29T14:29:17Z",
+  "verification_status": "passed",
+  "overall_status": "passed",
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 1
+  },
+  "checks": [{
+      "name": "format:check",
+      "command": "",
+      "status": "SKIPPED",
+      "exit_code": null,
+      "output_summary": "Skipped: no 'format:check' script in package.json"
+    },{
+      "name": "lint",
+      "command": "npm run lint",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": "\n> legacy-lens@0.1.0 lint\n> eslint\n\n\n/home/uzi/Projects/hackathons/legacy-lens/app/__tests__/guardrail-test.test.tsx\n  8:43  warning  'beforeEach' is defined but never used  @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/allowlist.test.ts\n  10:32  warning  'vi' is defined but never used         @typescript-eslint/no-unused-vars\n  10:36  warning  'afterEach' is defined but never used  @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/behavioral-contract.test.ts\n  133:18  warning  '_rules' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  142:15  warning  '_id' is assigned a value but never used     @typescript-eslint/no-unused-vars\n  153:18  warning  '_title' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  164:17  warning  '_file' is assigned a value but never used   @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/bundle.test.ts\n  149:19  warning  '_r' is assigned a value but never used   @typescript-eslint/no-unused-vars\n  184:34  warning  '_bc' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  189:21  warning  '_i' is assigned a value but never used   @typescript-eslint/no-unused-vars\n  194:23  warning  '_m' is assigned a value but never used   @typescript-eslint/no-unused-vars\n  199:29  warning  '_gt' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/data-foundation.test.ts\n  212:21  warning  '_findings' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  220:23  warning  '_id' is assigned a value but never used        @typescript-eslint/no-unused-vars\n  265:25  warning  '_ts' is assigned a value but never used        @typescript-eslint/no-unused-vars\n  301:18  warning  '_nodes' is assigned a value but never used     @typescript-eslint/no-un"
+    },{
+      "name": "typecheck",
+      "command": "node_modules/.bin/tsc --noEmit",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": ""
+    },{
+      "name": "test",
+      "command": "npm run test",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": "\n> legacy-lens@0.1.0 test\n> vitest run\n\n(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:\n  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `\"type\": \"module\"` in the closest package.json\nSet `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.\n\n RUN  v4.1.11 /home/uzi/Projects/hackathons/legacy-lens\n\n ✓  lib  lib/analysis/__tests__/allowlist.test.ts (10 tests) 11ms\n ✓  lib  lib/analysis/__tests__/behavioral-contract.test.ts (20 tests) 12ms\n ✓  lib  lib/analysis/__tests__/bundle.test.ts (9 tests) 9ms\n ✓  lib  lib/analysis/__tests__/bob-pipeline.test.ts (7 tests) 12ms\n ✓  lib  lib/analysis/__tests__/data-foundation.test.ts (25 tests) 12ms\n ✓  app  app/__tests__/review-workspace.test.tsx (10 tests) 76ms\n ✓  app  app/__tests__/guardrail-test.test.tsx (14 tests) 85ms\n ✓  app  app/__tests__/reveal-intent.test.tsx (8 tests) 101ms\n ✓  app  app/__tests__/bob-analysis-pipeline.test.tsx (6 tests) 102ms\n\n Test Files  9 passed (9)\n      Tests  109 passed (109)\n   Start at  19:29:20\n   Duration  537ms (transform 365ms, setup 115ms, import 1.01s, tests 421ms, environment 597ms)"
+    },{
+      "name": "build",
+      "command": "npm run build",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": "\n> legacy-lens@0.1.0 build\n> next build\n\n▲ Next.js 16.3.3 (Turbopack)\n✓ Running next.config.ts took 12ms\n\n  Creating an optimized production build ...\n✓ Compiled successfully in 526ms\n  Running TypeScript ...\n  Finished TypeScript in 1108ms ...\n  Collecting page data using 6 workers ...\n  Generating static pages using 6 workers (0/5) ...\n  Generating static pages using 6 workers (1/5) \r\n  Generating static pages using 6 workers (2/5) \r\n  Generating static pages using 6 workers (3/5) \r\n✓ Generating static pages using 6 workers (5/5) in 324ms\nTurbopack build encountered 1 warning:\n./lib/analysis/allowlist.ts:78:28\nWarning: Dynamic filesystem access causes tracing of the whole project\n  76 |   const entries = await Promise.all(\n  77 |     ALLOWED_PATHS.map(async (relativePath) => {\n> 78 |       const absolutePath = path.join(base, relativePath);\n     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  79 |       const content = await readFile(absolutePath, \"utf-8\");\n  80 |       return [relativePath, content] as const;\n  81 |     })\n\nStatic analysis determined that this filesystem access causes the whole project to be traced and included in the output.\nThis is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.\nThis can slow down deployments or lead to failures when size limits are exceeded.\nTo resolve this, you can\n- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or\n- only use them in development, or\n- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or\n- remove them.\n\nImport trace:\n  App Route:\n    ./lib/analysis/allowlist.ts\n    ./app/api/analyze/route.ts\n\n\n  Finalizing page optimization ...\n\nRoute (app)\n┌ ○ /\n├ ○ /_not-found\n└ ƒ /api/analyze\n\n\n○  (Static)   prerendered as static content\nƒ  (Dynamic)  server-rendered on demand"
+    }],
+  "findings": [],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": "124ee9e862f34e985b1cdf0a39d0c4221b5e8cc8",
+    "package_manager": "npm",
+    "changed_files": [".agent/reports/latest.json",".agent/reports/latest.md",".agent/state/workflow.json","app/components/ReviewHeader.tsx","app/globals.css","app/page.tsx"],
+    "contract_path": null,
+    "previous_report": null
+  }
+}

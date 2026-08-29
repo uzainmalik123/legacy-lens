@@ -1,0 +1,53 @@
+{
+  "workflow_id": "verification",
+  "feature_id": "feat-behavioral-contract-model",
+  "iteration": 2,
+  "timestamp": "2026-08-29T14:26:32Z",
+  "verification_status": "failed",
+  "overall_status": "failed",
+  "summary": {
+    "passed": 1,
+    "failed": 3,
+    "skipped": 1
+  },
+  "checks": [{
+      "name": "format:check",
+      "command": "",
+      "status": "SKIPPED",
+      "exit_code": null,
+      "output_summary": "Skipped: no 'format:check' script in package.json"
+    },{
+      "name": "lint",
+      "command": "npm run lint",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": "\n> legacy-lens@0.1.0 lint\n> eslint\n\n\n/home/uzi/Projects/hackathons/legacy-lens/app/__tests__/guardrail-test.test.tsx\n  8:43  warning  'beforeEach' is defined but never used  @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/behavioral-contract.test.ts\n  133:18  warning  '_rules' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  142:15  warning  '_id' is assigned a value but never used     @typescript-eslint/no-unused-vars\n  153:18  warning  '_title' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  164:17  warning  '_file' is assigned a value but never used   @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/bundle.test.ts\n  149:19  warning  '_r' is assigned a value but never used   @typescript-eslint/no-unused-vars\n  184:34  warning  '_bc' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  189:21  warning  '_i' is assigned a value but never used   @typescript-eslint/no-unused-vars\n  194:23  warning  '_m' is assigned a value but never used   @typescript-eslint/no-unused-vars\n  199:29  warning  '_gt' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/data-foundation.test.ts\n  212:21  warning  '_findings' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  220:23  warning  '_id' is assigned a value but never used        @typescript-eslint/no-unused-vars\n  265:25  warning  '_ts' is assigned a value but never used        @typescript-eslint/no-unused-vars\n  301:18  warning  '_nodes' is assigned a value but never used     @typescript-eslint/no-unused-vars\n\n✖ 14 problems (0 errors, 14 warnings)"
+    },{
+      "name": "typecheck",
+      "command": "node_modules/.bin/tsc --noEmit",
+      "status": "FAIL",
+      "exit_code": 2,
+      "output_summary": "app/__tests__/bob-analysis-pipeline.test.tsx(99,24): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.\napp/__tests__/bob-analysis-pipeline.test.tsx(107,28): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.\napp/components/ReviewWorkspace.tsx(243,20): error TS2367: This comparison appears to be unintentional because the types '\"error\" | \"preparing\" | \"analyzing\" | \"validating\"' and '\"idle\"' have no overlap."
+    },{
+      "name": "test",
+      "command": "npm run test",
+      "status": "FAIL",
+      "exit_code": 1,
+      "output_summary": "\n> legacy-lens@0.1.0 test\n> vitest run\n\n(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:\n  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `\"type\": \"module\"` in the closest package.json\nSet `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.\n\n RUN  v4.1.11 /home/uzi/Projects/hackathons/legacy-lens\n\nWarning: A vi.mock(\"fs/promises\") call in \"/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/allowlist.test.ts\" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.\nSee: https://vitest.dev/guide/mocking/modules#how-it-works\nWarning: A vi.mock(\"fs/promises\") call in \"/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/allowlist.test.ts\" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.\nSee: https://vitest.dev/guide/mocking/modules#how-it-works\n ❯  lib  lib/analysis/__tests__/allowlist.test.ts (10 tests | 1 failed) 9ms\n     ✓ TEST-603: ALLOWED_PATHS does not contain GROUND_TRUTH.md 2ms\n     ✓ TEST-604: ALLOWED_PATHS does not contain LEGACY_FIXTURE_SPEC.md 0ms\n     ✓ TEST-605: ALLOWED_PATHS does not contain ANALYSIS_SCOPE.md 0ms\n     ✓ TEST-606: ALLOWED_PATHS does not contain PROPOSED_CHANGE.md 0ms\n     ✓ TEST-613: ALLOWED_PATHS contains no path matching any forbidden filename 1ms\n     ✓ ALLOWED_PATHS contains expected Java source files 0ms\n     ✓ ALLOWED_PATHS contains test Java files 0ms\n     ✓ ALLOWED_PATHS does not contain target/ build artifacts 0ms\n     × TEST-601: returns a map containing content for all allowlisted "
+    },{
+      "name": "build",
+      "command": "npm run build",
+      "status": "FAIL",
+      "exit_code": 1,
+      "output_summary": "\n> legacy-lens@0.1.0 build\n> next build\n\n▲ Next.js 16.3.3 (Turbopack)\n✓ Running next.config.ts took 12ms\n\n  Creating an optimized production build ...\n✓ Compiled successfully in 1368ms\n  Running TypeScript ...\napp/__tests__/bob-analysis-pipeline.test.tsx(99,24): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.\napp/__tests__/bob-analysis-pipeline.test.tsx(107,28): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.\napp/components/ReviewWorkspace.tsx(243,20): error TS2367: This comparison appears to be unintentional because the types '\"error\" | \"preparing\" | \"analyzing\" | \"validating\"' and '\"idle\"' have no overlap.\nFailed to type check.\n\nTurbopack build encountered 1 warning:\n./lib/analysis/allowlist.ts:78:28\nWarning: Dynamic filesystem access causes tracing of the whole project\n  76 |   const entries = await Promise.all(\n  77 |     ALLOWED_PATHS.map(async (relativePath) => {\n> 78 |       const absolutePath = path.join(base, relativePath);\n     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  79 |       const content = await readFile(absolutePath, \"utf-8\");\n  80 |       return [relativePath, content] as const;\n  81 |     })\n\nStatic analysis determined that this filesystem access causes the whole project to be traced and included in the output.\nThis is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.\nThis can slow down deployments or lead to failures when size limits are exceeded.\nTo resolve this, you can\n- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or\n- only use them in development, or\n- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or\n- remove them.\n\nImport trace:\n  App Route:\n    ./lib/analysis/allowlist.ts\n    ./app/api/analyze/route.ts"
+    }],
+  "findings": [],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": "124ee9e862f34e985b1cdf0a39d0c4221b5e8cc8",
+    "package_manager": "npm",
+    "changed_files": ["app/components/ReviewHeader.tsx","app/globals.css","app/page.tsx"],
+    "contract_path": null,
+    "previous_report": null
+  }
+}

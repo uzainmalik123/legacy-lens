@@ -1,0 +1,60 @@
+{
+  "workflow_id": "implementation",
+  "feature_id": "feat-bob-analysis-pipeline",
+  "iteration": 1,
+  "timestamp": "2026-08-29T14:29:17Z",
+  "overall_status": "pass",
+  "checks": [
+    {
+      "name": "lint",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": "lint passed"
+    },
+    {
+      "name": "typecheck",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": "tsc --noEmit passed"
+    },
+    {
+      "name": "test",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": 516,
+      "output_summary": "Test Files 9 passed (9) | Tests 109 passed (109)"
+    },
+    {
+      "name": "build",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": "next build passed"
+    }
+  ],
+  "findings": [],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": "124ee9e862f34e985b1cdf0a39d0c4221b5e8cc8",
+    "changed_files": [
+      "app/components/ReviewHeader.tsx",
+      "app/page.tsx",
+      "app/api/analyze/route.ts",
+      "app/components/AnalysisProgress.tsx",
+      "app/components/ReviewWorkspace.tsx",
+      "lib/analysis/allowlist.ts",
+      "lib/analysis/bundle.ts",
+      "lib/analysis/bob-client.ts",
+      "lib/analysis/prompt.ts",
+      "lib/analysis/__tests__/allowlist.test.ts",
+      "lib/analysis/__tests__/bundle.test.ts",
+      "lib/analysis/__tests__/bob-pipeline.test.ts",
+      "app/__tests__/bob-analysis-pipeline.test.tsx",
+      "ENV_SETUP.md"
+    ],
+    "contract_path": ".agent/contracts/contract-feat-bob-analysis-pipeline.json",
+    "previous_report": null
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "feature_id": "feat-bob-analysis-pipeline",
+  "approved_at": "2025-01-01T00:00:00Z",
+  "approved_by": "human",
+  "plan_path": ".agent/plans/plan-feat-bob-analysis-pipeline.md",
+  "contract_path": ".agent/contracts/contract-feat-bob-analysis-pipeline.json",
+  "grill_report_path": ".agent/reports/grill-feat-bob-analysis-pipeline.md"
+}

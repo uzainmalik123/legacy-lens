@@ -1,0 +1,411 @@
+{
+  "feature_id": "feat-bob-analysis-pipeline",
+  "objective": "Replace the static development-fixture data source with a real IBM Bob-powered analysis pipeline that reads only allowlisted Meridian source files, validates output through existing Zod schemas, and renders live results in the existing Review Workspace while keeping the fixture fallback clearly labelled.",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "description": "A Next.js Route Handler (app/api/analyze/route.ts) executes the Bob analysis server-side via POST. It reads only the allowlisted source files via readAllowedSources() and returns a JSON AnalysisBundle containing all five contracts (review, behavioral-contract, metadata, intent, guardrail-test) plus optional blast_radius.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-002",
+      "description": "lib/analysis/allowlist.ts defines and exports an ALLOWED_PATHS constant — an explicit hard-coded array of allowed analysis paths. The readAllowedSources() function reads only those files from disk (base path: process.cwd()) and returns a key-value map. Forbidden paths (GROUND_TRUTH.md, LEGACY_FIXTURE_SPEC.md, ANALYSIS_SCOPE.md, PROPOSED_CHANGE.md, target/**) must not appear in ALLOWED_PATHS.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-003",
+      "description": "lib/analysis/bundle.ts defines AnalysisBundleWireSchema as a z.object containing the five required wire sub-schemas plus optional blast_radius. The route handler validates the raw Bob response through AnalysisBundleWireSchema.safeParse() before returning any data. If validation fails the route returns HTTP 422 with { error: 'validation_failed', details: string }.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-004",
+      "description": "The Bob prompt in lib/analysis/prompt.ts is a single structured request supplying the full allowed source content. The prompt explicitly states that GROUND_TRUTH.md, LEGACY_FIXTURE_SPEC.md, ANALYSIS_SCOPE.md, and PROPOSED_CHANGE.md are not available and must not include the ground-truth answer or canonical expected conclusions.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-005",
+      "description": "Three LLM credentials are read exclusively from process.env server-side: BOB_API_KEY, BOB_API_URL, BOB_MODEL. No credential is passed to any client component, logged, or serialised. If BOB_API_URL or BOB_API_KEY is absent the route returns HTTP 503 with { error: 'not_configured' }.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-006",
+      "description": "app/page.tsx is a Server Component that calls getMeridianReviewSession() and passes the result as initialSession prop to ReviewWorkspace. ReviewWorkspace (Client Component) renders the fixture session from initialSession (labelled FIXTURE), exposes an ANALYZE CHANGE button, disables the button while a request is in-flight to prevent duplicate requests, calls fetch('/api/analyze') on click, shows honest four-stage progress (preparing → analyzing → validating → complete), on success replaces the session with live data labelled LIVE, and on failure shows a controlled error — never silently substituting fixture data for live.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-007",
+      "description": "ReviewHeader receives a new optional analysisMode prop of type 'fixture' | 'live' and renders a visible badge: 'LIVE BOB ANALYSIS' (accent color) for live mode, 'DEVELOPMENT FIXTURE' (muted/warning color) for fixture mode. When analysisMode is undefined no badge is rendered.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-008",
+      "description": "app/components/AnalysisProgress.tsx renders the pipeline stages: preparing | analyzing | validating | complete | error. The 'analyzing' stage copy reads 'IBM Bob analyzing...' verbatim. No fake sub-agent stages are shown. fetch() has no application-level AbortController timeout. The button remains disabled until complete or error.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-009",
+      "description": "If the Bob response is structurally valid JSON but fails Zod schema validation, the UI displays an explicit error message ('Analysis returned malformed data — results not displayed. Use DEVELOPMENT FIXTURE mode.') and does NOT substitute fixture data.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-010",
+      "description": "An .env.example file is created with three placeholder entries: BOB_API_URL=https://api.us-east.bob.ibm.com/inference/v1, BOB_API_KEY=your_ibm_bob_api_key_here, BOB_MODEL=your_bob_model_id_here. No real credential appears anywhere in the repository.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-011",
+      "description": "The route handler returns an X-Analysis-Mode: live response header on HTTP 200 so the client can distinguish live results from fixture results.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-012",
+      "description": "All new tests mock the external LLM call using vitest mock/spy. No real network request to any LLM API is made during npm test.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-013",
+      "description": "The existing getMeridianReviewSession() function in lib/review-workspace/loader.ts is preserved unchanged. Fixture mode continues to use it directly.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-014",
+      "description": "After AnalysisBundleWireSchema validation passes, each sub-schema is mapped to its existing domain model via the existing fromWireFormat functions. No new mapping logic is introduced for the five existing contract types.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-015",
+      "description": "lib/analysis/bob-client.ts exports callBobAnalysis(sources) using an isolated bobFetch() helper that constructs the Authorization: Bearer {BOB_API_KEY} header and POST {BOB_API_URL}/chat/completions request in one place. Request body uses OpenAI-compatible messages structure and includes response_format: { type: 'json_object' }. Single endpoint only — no auto-detection of provider from URL, no IAM token exchange, no watsonx.ai format.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-016",
+      "description": "AnalysisBundleWireSchema includes blast_radius as an optional field (BlastRadiusResultWireSchema.optional()). If present in the Bob response it is parsed and stored in the live session state. No new UI component renders it in this feature.",
+      "priority": "should"
+    }
+  ],
+  "non_requirements": [
+    "No GitHub App, OAuth, PR API, or webhook integration",
+    "No database, persistent store, or session management",
+    "No authentication or multi-user support",
+    "No multi-agent swarm — one Bob LLM call only",
+    "No MCP server, vector database, RAG, or embeddings",
+    "No new UI design system or layout restructuring beyond the mode badge and progress component",
+    "No automatic execution of the Bob-generated guardrail test code",
+    "No deployment pipeline changes",
+    "No Vercel maxDuration or platform-specific timeout configuration",
+    "No IBM Cloud IAM token exchange or watsonx.ai format",
+    "No provider auto-detection from BOB_API_URL prefix",
+    "No redesign of existing UI components (FindingsPane, DiffPane, IntentPanel, GuardrailTestView)",
+    "No changes to frozen Meridian fixture files (demo/legacy-billing/src/**, pom.xml, proposed-change.patch)",
+    "No changes to existing fixture JSON files in lib/analysis/fixtures/",
+    "No changes to existing frozen schema files (types.ts, parser.ts, review.ts, intent.ts, blast-radius.ts, guardrail-test.ts, metadata.ts)",
+    "No removal of the fixture mode or existing tests",
+    "No server-side streaming or WebSocket support",
+    "No changes to lib/review-workspace/loader.ts, diff.ts, confidence.ts, evidence-format.ts"
+  ],
+  "allowed_paths": [
+    "app/page.tsx",
+    "app/api/analyze/route.ts",
+    "app/components/ReviewWorkspace.tsx",
+    "app/components/AnalysisProgress.tsx",
+    "app/components/ReviewHeader.tsx",
+    "lib/analysis/allowlist.ts",
+    "lib/analysis/bundle.ts",
+    "lib/analysis/bob-client.ts",
+    "lib/analysis/prompt.ts",
+    "lib/analysis/__tests__/allowlist.test.ts",
+    "lib/analysis/__tests__/bundle.test.ts",
+    "lib/analysis/__tests__/bob-pipeline.test.ts",
+    ".env.example"
+  ],
+  "forbidden_paths": [
+    "demo/legacy-billing/GROUND_TRUTH.md",
+    "demo/legacy-billing/LEGACY_FIXTURE_SPEC.md",
+    "demo/legacy-billing/ANALYSIS_SCOPE.md",
+    "demo/legacy-billing/PROPOSED_CHANGE.md",
+    "demo/legacy-billing/target/**",
+    "lib/analysis/fixtures/**",
+    "lib/analysis/types.ts",
+    "lib/analysis/parser.ts",
+    "lib/analysis/review.ts",
+    "lib/analysis/intent.ts",
+    "lib/analysis/blast-radius.ts",
+    "lib/analysis/guardrail-test.ts",
+    "lib/analysis/metadata.ts",
+    "lib/review-workspace/loader.ts",
+    "lib/review-workspace/diff.ts",
+    "lib/review-workspace/confidence.ts",
+    "lib/review-workspace/evidence-format.ts",
+    ".agent/**",
+    ".env",
+    ".env.*"
+  ],
+  "expected_files": {
+    "created": [
+      "lib/analysis/allowlist.ts",
+      "lib/analysis/bundle.ts",
+      "lib/analysis/bob-client.ts",
+      "lib/analysis/prompt.ts",
+      "app/api/analyze/route.ts",
+      "app/components/ReviewWorkspace.tsx",
+      "app/components/AnalysisProgress.tsx",
+      "lib/analysis/__tests__/allowlist.test.ts",
+      "lib/analysis/__tests__/bundle.test.ts",
+      "lib/analysis/__tests__/bob-pipeline.test.ts",
+      ".env.example"
+    ],
+    "modified": [
+      "app/page.tsx",
+      "app/components/ReviewHeader.tsx"
+    ],
+    "deleted": []
+  },
+  "dependencies": {
+    "runtime": [],
+    "dev": []
+  },
+  "test_requirements": [
+    {
+      "id": "TEST-601",
+      "description": "readAllowedSources() returns a map containing content for all allowlisted Java source and test files, pom.xml, and proposed-change.patch.",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-602",
+      "description": "readAllowedSources() throws an error if any allowlisted file is missing from disk.",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-603",
+      "description": "ALLOWED_PATHS constant does not contain any path including the string 'GROUND_TRUTH.md'.",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-604",
+      "description": "ALLOWED_PATHS constant does not contain any path including the string 'LEGACY_FIXTURE_SPEC.md'.",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-605",
+      "description": "ALLOWED_PATHS constant does not contain any path including the string 'ANALYSIS_SCOPE.md'.",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-606",
+      "description": "ALLOWED_PATHS constant does not contain any path including the string 'PROPOSED_CHANGE.md'.",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-607",
+      "description": "AnalysisBundleWireSchema.safeParse passes for a valid bundle object containing all five sub-schemas.",
+      "type": "unit",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-608",
+      "description": "AnalysisBundleWireSchema.safeParse fails when the review sub-object is missing.",
+      "type": "unit",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-609",
+      "description": "AnalysisBundleWireSchema.safeParse fails when behavioral_contract has an empty rules array.",
+      "type": "unit",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-610",
+      "description": "AnalysisBundleWireSchema.safeParse passes when guardrail_test is null.",
+      "type": "unit",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-611",
+      "description": "The route handler returns HTTP 422 when the mocked Bob client returns malformed JSON that fails AnalysisBundleWireSchema validation.",
+      "type": "integration",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-612",
+      "description": "The route handler returns HTTP 200 with X-Analysis-Mode: live header when the mocked Bob client returns a valid AnalysisBundleWire object.",
+      "type": "integration",
+      "requirement_ref": "REQ-011"
+    },
+    {
+      "id": "TEST-613",
+      "description": "The ALLOWED_PATHS constant contains no path matching any of the four forbidden filenames (GROUND_TRUTH.md, LEGACY_FIXTURE_SPEC.md, ANALYSIS_SCOPE.md, PROPOSED_CHANGE.md).",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-614",
+      "description": "ReviewHeader renders the text 'LIVE BOB ANALYSIS' when analysisMode prop is 'live'.",
+      "type": "unit",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-615",
+      "description": "ReviewHeader renders the text 'DEVELOPMENT FIXTURE' when analysisMode prop is 'fixture'.",
+      "type": "unit",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-616",
+      "description": "ReviewWorkspace renders a button with accessible name containing 'Analyze Change' or 'ANALYZE CHANGE' in its initial fixture state.",
+      "type": "unit",
+      "requirement_ref": "REQ-006"
+    },
+    {
+      "id": "TEST-617",
+      "description": "No real network fetch to any LLM API URL occurs during the test suite (verified by mocking global fetch in bob-pipeline tests).",
+      "type": "unit",
+      "requirement_ref": "REQ-012"
+    },
+    {
+      "id": "TEST-618",
+      "description": "The ReviewWorkspace ANALYZE CHANGE button is disabled (aria-disabled or disabled attribute) while an analysis is in-flight.",
+      "type": "unit",
+      "requirement_ref": "REQ-006"
+    },
+    {
+      "id": "TEST-619",
+      "description": "AnalysisBundleWireSchema.safeParse passes when blast_radius field is absent from the bundle.",
+      "type": "unit",
+      "requirement_ref": "REQ-016"
+    },
+    {
+      "id": "TEST-620",
+      "description": "The route handler returns HTTP 503 with { error: 'not_configured' } when BOB_API_KEY environment variable is absent.",
+      "type": "integration",
+      "requirement_ref": "REQ-005"
+    }
+  ],
+  "security_requirements": [
+    {
+      "id": "SEC-601",
+      "description": "BOB_API_KEY is never read in any Client Component ('use client') or passed in an HTTP response body to the browser.",
+      "category": "secret-exposure"
+    },
+    {
+      "id": "SEC-602",
+      "description": "BOB_API_KEY is never logged via console.log, console.error, or any logging mechanism, and is never serialised into any JSON response or fixture file.",
+      "category": "secret-exposure"
+    },
+    {
+      "id": "SEC-603",
+      "description": "bob-client.ts runs exclusively in the Next.js Node.js server runtime. The file must not be imported from any Client Component.",
+      "category": "configuration"
+    },
+    {
+      "id": "SEC-604",
+      "description": "readAllowedSources() constructs file paths from the hard-coded ALLOWED_PATHS array only. No user input, URL parameter, or request body field influences which files are opened.",
+      "category": "path-traversal"
+    },
+    {
+      "id": "SEC-605",
+      "description": "Every field of the Bob response is accessed only after AnalysisBundleWireSchema.safeParse() returns success:true. Raw response body fields are never accessed directly.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-606",
+      "description": "The guardrail test code string from Bob is rendered as display text only. It is never passed to eval(), new Function(), or any execution mechanism.",
+      "category": "injection"
+    },
+    {
+      "id": "SEC-607",
+      "description": "The LLM prompt constructed in prompt.ts never includes environment variable values, .env file contents, or file system paths beyond the allowed analysis inputs.",
+      "category": "secret-exposure"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-601",
+      "description": "Clicking the ANALYZE CHANGE button causes the browser to make a network request to POST /api/analyze (verifiable by TEST-616 + mocked fetch in TEST-617).",
+      "automated": true
+    },
+    {
+      "id": "AC-602",
+      "description": "The ALLOWED_PATHS constant in lib/analysis/allowlist.ts contains no path matching GROUND_TRUTH.md, LEGACY_FIXTURE_SPEC.md, ANALYSIS_SCOPE.md, or PROPOSED_CHANGE.md (verifiable by TEST-603 through TEST-606, TEST-613).",
+      "automated": true
+    },
+    {
+      "id": "AC-603",
+      "description": "The route handler calls AnalysisBundleWireSchema.safeParse() on the raw Bob response before returning HTTP 200 (verifiable by TEST-612).",
+      "automated": true
+    },
+    {
+      "id": "AC-604",
+      "description": "When the mocked Bob client returns a valid bundle, the ReviewWorkspace transitions to mode=live and ReviewHeader displays the LIVE BOB ANALYSIS badge (verifiable by TEST-614).",
+      "automated": true
+    },
+    {
+      "id": "AC-605",
+      "description": "When the mocked Bob client returns invalid data, ReviewWorkspace shows an error message and does NOT display fixture data labelled as live analysis (verifiable by TEST-611).",
+      "automated": true
+    },
+    {
+      "id": "AC-606",
+      "description": "On initial page load (fixture mode), the ReviewHeader displays the DEVELOPMENT FIXTURE badge (verifiable by TEST-615).",
+      "automated": true
+    },
+    {
+      "id": "AC-607",
+      "description": "The string value of BOB_API_KEY does not appear in any file tracked by git (verifiable by grep on the repository).",
+      "automated": false
+    },
+    {
+      "id": "AC-608",
+      "description": "npm test completes without any network request to a real LLM endpoint (verifiable by TEST-617).",
+      "automated": true
+    },
+    {
+      "id": "AC-609",
+      "description": "npm run lint exits 0 with no new lint errors.",
+      "automated": true
+    },
+    {
+      "id": "AC-610",
+      "description": "tsc --noEmit exits 0 with no new type errors.",
+      "automated": true
+    },
+    {
+      "id": "AC-611",
+      "description": "All existing tests TEST-101 through TEST-414 continue to pass after the changes.",
+      "automated": true
+    },
+    {
+      "id": "AC-612",
+      "description": "During a live analysis run, the 'analyzing' stage shows the copy 'IBM Bob analyzing...' and at least the 'validating' stage appears before 'complete'.",
+      "automated": false
+    },
+    {
+      "id": "AC-613",
+      "description": "When the live analysis returns guardrail_test: null, the guardrail test section shows 'not generated' and no JavaScript error is thrown.",
+      "automated": true
+    },
+    {
+      "id": "AC-614",
+      "description": "The ANALYZE CHANGE button is disabled while an analysis is in-flight — a second click has no effect (verifiable by TEST-618).",
+      "automated": true
+    },
+    {
+      "id": "AC-615",
+      "description": "When BOB_API_URL or BOB_API_KEY is not set, POST /api/analyze returns HTTP 503 with { error: 'not_configured' } and the UI displays 'Analysis not configured — check environment variables.' (verifiable by TEST-620).",
+      "automated": true
+    }
+  ],
+  "change_budget": {
+    "files_changed": 13,
+    "lines_added": 700,
+    "lines_removed": 20
+  },
+  "iteration_limit": 10,
+  "status": "approved",
+  "approved_at": "2025-01-01T00:00:00Z"
+}

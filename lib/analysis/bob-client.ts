@@ -195,14 +195,42 @@ export async function callBobAnalysis(sources: AllowedSourcesMap): Promise<unkno
       422
     );
   }
+  
+  function parseBobLastMessage(raw: string): unknown {
+  let text = raw.trim();
 
-  // Parse last_message as the Legacy Lens JSON payload
+  // Handle ```json ... ``` or ``` ... ```
+  const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+
+  if (fenced) {
+    text = fenced[1].trim();
+  }
+
+  
+
+  // Preferred path: strict JSON
   try {
-    return JSON.parse(wrapper.last_message);
+    return JSON.parse(text);
   } catch {
+    // Fallback for accidental prose around a JSON object
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(text.slice(start, end + 1));
+      } catch {
+        // fall through to controlled error below
+      }
+    }
+
     throw new BobApiError(
       "Bob last_message is not valid JSON — cannot parse Legacy Lens output",
       422
     );
   }
+}
+
+  // Parse last_message as the Legacy Lens JSON payload
+  return parseBobLastMessage(wrapper.last_message);
 }

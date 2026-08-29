@@ -3,17 +3,59 @@
 // Integration tests for the Bob analysis pipeline (route handler + client).
 // TEST-611, TEST-612, TEST-617, TEST-620 per contract.
 //
-// REQ-012: all tests mock the LLM call — no real network requests.
+// REQ-012: all tests mock child_process/Bob execution — no real Bob invocations.
+// vi.mock('child_process') is hoisted by vitest so spawn is never called.
 // ---------------------------------------------------------------------------
 
+import { EventEmitter } from "events";
 import { it, expect, describe, vi, beforeEach, afterEach } from "vitest";
-import { isBobConfigured } from "@/lib/analysis/bob-client";
+
+// vi.mock is hoisted to the top of the file by vitest so it intercepts
+// the child_process module before bob-client.ts imports it.
+vi.mock("child_process", () => ({
+  spawn: vi.fn(),
+}));
+
+import { spawn } from "child_process";
+import { isBobConfigured, callBobAnalysis, BobApiError } from "@/lib/analysis/bob-client";
 import { AnalysisBundleWireSchema } from "@/lib/analysis/bundle";
 
 // ---------------------------------------------------------------------------
-// TEST-617: Verify no real LLM fetch occurs during tests
-// We confirm this by not setting BOB_API_KEY/BOB_API_URL in the test env.
-// The isBobConfigured() guard returns false without env vars.
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Configure the spawn mock to emit stdout and exit with exitCode.
+ * The mock replicates the EventEmitter-based child_process.ChildProcess API.
+ */
+function setupSpawnMock(stdoutPayload: string, exitCode = 0): void {
+  const mockChild = {
+    stdout: new EventEmitter(),
+    stderr: new EventEmitter(),
+    stdin: { write: vi.fn(), end: vi.fn() },
+    on: vi.fn(),
+  };
+
+  mockChild.on.mockImplementation((event: string, cb: (...args: unknown[]) => void) => {
+    if (event === "close") {
+      setImmediate(() => {
+        mockChild.stdout.emit("data", Buffer.from(stdoutPayload, "utf8"));
+        setImmediate(() => cb(exitCode));
+      });
+    }
+    // "error" is not called on normal paths — omit intentionally
+    return mockChild;
+  });
+
+  vi.mocked(spawn).mockReturnValue(
+    mockChild as unknown as ReturnType<typeof spawn>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TEST-620 / TEST-617: Bob configuration guard
+// isBobConfigured() now only requires BOB_API_KEY (Shell transport).
+// BOB_API_URL and BOB_MODEL are not required.
 // ---------------------------------------------------------------------------
 
 describe("Bob client configuration guard", () => {
@@ -25,35 +67,44 @@ describe("Bob client configuration guard", () => {
 
   // TEST-620
   it("TEST-620: isBobConfigured returns false when BOB_API_KEY is absent", () => {
-    process.env = { ...originalEnv, BOB_API_KEY: undefined, BOB_API_URL: undefined };
+    process.env = { ...originalEnv, BOB_API_KEY: undefined };
     expect(isBobConfigured()).toBe(false);
   });
 
-  it("isBobConfigured returns false when only BOB_API_URL is set", () => {
-    process.env = {
-      ...originalEnv,
-      BOB_API_URL: "https://api.example.com",
-      BOB_API_KEY: undefined,
-    };
+  it("isBobConfigured returns false when BOB_API_KEY is empty/whitespace", () => {
+    process.env = { ...originalEnv, BOB_API_KEY: "   " };
     expect(isBobConfigured()).toBe(false);
   });
 
-  it("isBobConfigured returns false when only BOB_API_KEY is set", () => {
-    process.env = {
-      ...originalEnv,
-      BOB_API_URL: undefined,
-      BOB_API_KEY: "test-key",
-    };
-    expect(isBobConfigured()).toBe(false);
-  });
-
-  it("isBobConfigured returns true when both BOB_API_URL and BOB_API_KEY are set", () => {
-    process.env = {
-      ...originalEnv,
-      BOB_API_URL: "https://api.example.com",
-      BOB_API_KEY: "test-key",
-    };
+  it("isBobConfigured returns true when BOB_API_KEY is set", () => {
+    process.env = { ...originalEnv, BOB_API_KEY: "test-key" };
     expect(isBobConfigured()).toBe(true);
+  });
+
+  it("isBobConfigured returns true without BOB_API_URL (Shell transport does not need it)", () => {
+    process.env = { ...originalEnv, BOB_API_KEY: "test-key", BOB_API_URL: undefined };
+    expect(isBobConfigured()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TEST-617: Confirm no real Bob process is spawned during tests.
+//
+// The callBobAnalysis function throws BobApiError("not_configured") when
+// BOB_API_KEY is absent — spawn is never reached.
+// ---------------------------------------------------------------------------
+
+describe("No real Bob execution during tests (TEST-617)", () => {
+  beforeEach(() => {
+    delete process.env.BOB_API_URL;
+    delete process.env.BOB_API_KEY;
+    vi.clearAllMocks();
+  });
+
+  it("TEST-617: callBobAnalysis throws BobApiError without spawning Bob when not configured", async () => {
+    await expect(callBobAnalysis({})).rejects.toThrow(BobApiError);
+    // spawn must not have been called — the guard fires before it
+    expect(spawn).not.toHaveBeenCalled();
   });
 });
 
@@ -179,30 +230,79 @@ describe("AnalysisBundleWireSchema validation (simulates route handler step 3)",
 });
 
 // ---------------------------------------------------------------------------
-// TEST-617: Confirm no real network fetch during tests
-// The callBobAnalysis function throws BobApiError("not_configured") when
-// credentials are absent — before any fetch() call is made.
+// Bob Shell spawn transport — verify spawn invocation and wrapper parsing
 // ---------------------------------------------------------------------------
 
-describe("No real LLM network request during tests", () => {
+describe("Bob Shell spawn transport (mocked child_process)", () => {
   beforeEach(() => {
-    // Ensure credentials are not set
-    delete process.env.BOB_API_URL;
-    delete process.env.BOB_API_KEY;
+    process.env.BOB_API_KEY = "test-key";
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    delete process.env.BOB_API_KEY;
   });
 
-  it("TEST-617: callBobAnalysis throws BobApiError without making a network call when not configured", async () => {
-    // Spy on global fetch to confirm it is never called
-    const fetchSpy = vi.spyOn(global, "fetch");
+  it("callBobAnalysis resolves with parsed last_message on valid Bob Shell output", async () => {
+    const expectedBundle = { review: { analysis_id: "live-001" } };
+    setupSpawnMock(
+      JSON.stringify({
+        type: "result",
+        status: "success",
+        last_message: JSON.stringify(expectedBundle),
+      }),
+      0
+    );
 
-    const { callBobAnalysis } = await import("@/lib/analysis/bob-client");
-    const { BobApiError } = await import("@/lib/analysis/bob-client");
+    const result = await callBobAnalysis({ "demo/file.java": "class Foo {}" });
 
+    expect(result).toEqual(expectedBundle);
+    expect(spawn).toHaveBeenCalledOnce();
+
+    // Verify spawn was called with the correct executable and fixed args
+    const [cmd, args, opts] = vi.mocked(spawn).mock.calls[0];
+    expect(cmd).toBe("bob");
+    expect(args).toContain("run");
+    expect(args).toContain("--mode");
+    expect(args).toContain("ask");
+    expect(args).toContain("--format");
+    expect(args).toContain("json");
+    expect(args).toContain("--max-cost");
+    expect(args).toContain("5");
+    expect(args).toContain("--max-turns");
+    expect(args).toContain("1");
+    expect(args).toContain("--disable-mcp");
+    expect(args).toContain("--disable-subagents");
+    // shell: false is the critical security property
+    expect(opts).toMatchObject({ shell: false });
+  });
+
+  it("callBobAnalysis throws BobApiError when Bob exits non-zero", async () => {
+    setupSpawnMock("Error: Bob API key is required.", 1);
     await expect(callBobAnalysis({})).rejects.toThrow(BobApiError);
-    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("callBobAnalysis throws BobApiError when wrapper status is not success", async () => {
+    setupSpawnMock(
+      JSON.stringify({ type: "result", status: "error", last_message: null }),
+      0
+    );
+    await expect(callBobAnalysis({})).rejects.toThrow(BobApiError);
+  });
+
+  it("callBobAnalysis throws BobApiError when last_message is not valid JSON", async () => {
+    setupSpawnMock(
+      JSON.stringify({ type: "result", status: "success", last_message: "This is not JSON" }),
+      0
+    );
+    await expect(callBobAnalysis({})).rejects.toThrow(BobApiError);
+  });
+
+  it("callBobAnalysis throws BobApiError when last_message is empty/whitespace", async () => {
+    setupSpawnMock(
+      JSON.stringify({ type: "result", status: "success", last_message: "   " }),
+      0
+    );
+    await expect(callBobAnalysis({})).rejects.toThrow(BobApiError);
   });
 });

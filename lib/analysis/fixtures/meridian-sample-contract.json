@@ -1,0 +1,365 @@
+{
+  "_fixture_note": "DEVELOPMENT FIXTURE — not analysis agent output. Do not use as pipeline output.",
+  "analysis_id": "meridian-sample-20260829",
+  "generated_at": "2026-08-29T00:00:00Z",
+  "source_fixture": "demo/legacy-billing/src/main/java/com/meridian/billing",
+  "rules": [
+    {
+      "id": "BR-01",
+      "title": "Late fee is rounded DOWN to two decimal places",
+      "description": "MoneyUtils.roundLateFee() applies RoundingMode.DOWN (truncation) when scaling the calculated late fee to two decimal places. This is the rounding mode used for all late fee calculations in the billing cycle. By contrast, MoneyUtils.roundInterest() uses RoundingMode.HALF_UP — the two methods are intentionally asymmetric.",
+      "business_context": "Late fee rounding mode is a regulatory and financial precision choice. Using DOWN (truncation) means the customer is never charged more than the precise calculated amount.",
+      "invariant": "lateFeeCharged == floor2dp(outstandingBalance * LATE_FEE_RATE [+ FIXED_PENALTY_AMOUNT if applicable]). RoundingMode is DOWN, not HALF_UP.",
+      "evidence": [
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/MoneyUtils.java",
+          "symbol": "MoneyUtils.roundLateFee",
+          "line": [17, 19],
+          "excerpt": "public static BigDecimal roundLateFee(BigDecimal value) {\n    return value.setScale(2, RoundingMode.DOWN);\n}",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/MoneyUtils.java",
+          "symbol": "MoneyUtils.roundInterest",
+          "line": [24, 26],
+          "excerpt": "public static BigDecimal roundInterest(BigDecimal value) {\n    return value.setScale(2, RoundingMode.HALF_UP);\n}",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/LateFeeService.java",
+          "symbol": "LateFeeService.calculateLateFee",
+          "line": 51,
+          "excerpt": "BigDecimal rounded = MoneyUtils.roundLateFee(fee);",
+          "kind": "dependency"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.standardLateFeeCalculation",
+          "line": [100, 106],
+          "excerpt": "// balance=1000.00, rate=0.00823 → raw fee=8.23, no penalty (days<=30)\n// 1000.00 * 0.00823 = 8.230 → DOWN → 8.23",
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/proposed-change.patch",
+          "line": [8, 10],
+          "excerpt": "-        return value.setScale(2, RoundingMode.DOWN);\n+        return value.setScale(2, RoundingMode.HALF_UP);",
+          "kind": "change"
+        }
+      ],
+      "confidence": 0.98,
+      "test_coverage": "covered",
+      "related_symbols": [
+        "com.meridian.billing.util.MoneyUtils",
+        "com.meridian.billing.billing.LateFeeService"
+      ],
+      "downstream_dependencies": [
+        "com.meridian.billing.billing.BillingService",
+        "com.meridian.billing.model.BillingResult"
+      ],
+      "risk_if_changed": "The proposed change (proposed-change.patch) switches roundLateFee from RoundingMode.DOWN to RoundingMode.HALF_UP. This would silently increase late fees by up to $0.01 for any balance where the third decimal of (balance * 0.00823) is >= 5. All existing LateFeeServiceTest assertions use values where DOWN and HALF_UP produce the same result (8.23, 23.23), so the tests would not catch this regression."
+    },
+    {
+      "id": "BR-02",
+      "title": "Fixed $15.00 penalty is added only when effective days late exceeds 30",
+      "description": "LateFeeService.calculateLateFee() adds FIXED_PENALTY_AMOUNT ($15.00) to the base fee only when effectiveDaysLate strictly exceeds PENALTY_THRESHOLD_DAYS (30). The base fee is outstandingBalance * LATE_FEE_RATE (0.00823). The penalty is added before rounding and before the hardship cap is applied.",
+      "business_context": "Accounts delinquent beyond 30 effective days incur an escalated fixed penalty. The threshold uses effective days — after the grace period is absorbed — so grace-eligible accounts must be more than 37 raw days late to trigger the penalty.",
+      "invariant": "If effectiveDaysLate > 30: fee = roundDown(balance * 0.00823 + 15.00), subject to hardship cap. If effectiveDaysLate in (0, 30]: fee = roundDown(balance * 0.00823).",
+      "evidence": [
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/LateFeeService.java",
+          "symbol": "LateFeeService.calculateLateFee",
+          "line": [46, 48],
+          "excerpt": "if (effectiveDays > BillingConstants.PENALTY_THRESHOLD_DAYS) {\n    fee = fee.add(BillingConstants.FIXED_PENALTY_AMOUNT);\n}",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/BillingConstants.java",
+          "symbol": "BillingConstants.PENALTY_THRESHOLD_DAYS",
+          "line": 21,
+          "excerpt": "public static final int PENALTY_THRESHOLD_DAYS = 30;",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/BillingConstants.java",
+          "symbol": "BillingConstants.FIXED_PENALTY_AMOUNT",
+          "line": 24,
+          "excerpt": "public static final BigDecimal FIXED_PENALTY_AMOUNT = new BigDecimal(\"15.00\");",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.penaltyAddedWhenMoreThanThirtyDaysLate",
+          "line": [108, 115],
+          "excerpt": "// balance=1000.00 → base=8.23 + penalty=15.00 → 23.23\nvoid penaltyAddedWhenMoreThanThirtyDaysLate()",
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.standardLateFeeCalculation",
+          "line": [100, 106],
+          "excerpt": "// 15 days late, no penalty applied — confirms threshold is not crossed at 15 days",
+          "kind": "test"
+        }
+      ],
+      "confidence": 0.96,
+      "test_coverage": "covered",
+      "related_symbols": [
+        "com.meridian.billing.billing.LateFeeService",
+        "com.meridian.billing.billing.BillingConstants"
+      ],
+      "downstream_dependencies": [
+        "com.meridian.billing.billing.BillingService",
+        "com.meridian.billing.model.BillingResult"
+      ],
+      "risk_if_changed": "Changing PENALTY_THRESHOLD_DAYS shifts which accounts receive the extra $15.00. The strict greater-than (> 30) means exactly-30-day accounts are not penalised. Changing to >= 30 would be a silent behaviour change with no test coverage at the boundary."
+    },
+    {
+      "id": "BR-03",
+      "title": "Hardship plan caps the late fee at $25.00",
+      "description": "HardshipPolicy.applyHardshipCap() limits the computed late fee to HARDSHIP_FEE_CAP ($25.00) for customers where customer.isHardshipPlanActive() is true. The cap is applied as the last step in LateFeeService.calculateLateFee(), after the base fee, optional penalty, and rounding have all been computed.",
+      "business_context": "Customers on an active hardship plan are protected from fees above $25.00 per cycle. Customers whose computed fee is already below the cap are unaffected.",
+      "invariant": "If customer.hardshipPlanActive == true: lateFeeCharged == min(roundDown(baseFee [+ penalty]), 25.00). Customers not on hardship receive the full rounded fee.",
+      "evidence": [
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/policy/HardshipPolicy.java",
+          "symbol": "HardshipPolicy.applyHardshipCap",
+          "line": [20, 24],
+          "excerpt": "if (customer.isHardshipPlanActive()) {\n    return rawFee.min(BillingConstants.HARDSHIP_FEE_CAP);\n}\nreturn rawFee;",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/BillingConstants.java",
+          "symbol": "BillingConstants.HARDSHIP_FEE_CAP",
+          "line": 27,
+          "excerpt": "public static final BigDecimal HARDSHIP_FEE_CAP = new BigDecimal(\"25.00\");",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/LateFeeService.java",
+          "symbol": "LateFeeService.calculateLateFee",
+          "line": 53,
+          "excerpt": "return hardshipPolicy.applyHardshipCap(account.getCustomer(), rounded);",
+          "kind": "dependency"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/HardshipPolicyTest.java",
+          "symbol": "HardshipPolicyTest.hardshipCustomerFeeAboveCapIsLimitedToCap",
+          "line": [27, 33],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/HardshipPolicyTest.java",
+          "symbol": "HardshipPolicyTest.hardshipCustomerFeeBelowCapIsUnchanged",
+          "line": [36, 43],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/HardshipPolicyTest.java",
+          "symbol": "HardshipPolicyTest.nonHardshipCustomerFeeIsNotCapped",
+          "line": [46, 53],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/HardshipPolicyTest.java",
+          "symbol": "HardshipPolicyTest.hardshipCustomerFeeExactlyAtCapIsReturned",
+          "line": [56, 63],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.hardshipPlanCapsLateFeeAtTwentyFive",
+          "line": [67, 79],
+          "kind": "test"
+        }
+      ],
+      "confidence": 0.97,
+      "test_coverage": "covered",
+      "related_symbols": [
+        "com.meridian.billing.policy.HardshipPolicy",
+        "com.meridian.billing.billing.BillingConstants",
+        "com.meridian.billing.model.Customer"
+      ],
+      "downstream_dependencies": [
+        "com.meridian.billing.billing.LateFeeService"
+      ],
+      "risk_if_changed": "Removing the cap or raising HARDSHIP_FEE_CAP removes the protection for enrolled customers. The cap value must remain >= FIXED_PENALTY_AMOUNT ($15.00) to avoid a case where the penalty alone exceeds the cap."
+    },
+    {
+      "id": "BR-04",
+      "title": "Zero or negative outstanding balance receives no late fee",
+      "description": "LateFeeService.calculateLateFee() returns BigDecimal.ZERO immediately when MoneyUtils.isZeroOrNegative(account.getOutstandingBalance()) is true — before any fee rate, penalty, or hardship logic is applied. MoneyUtils.isZeroOrNegative() treats both zero and negative values as non-chargeable.",
+      "business_context": "Accounts with no outstanding balance (fully paid or in credit) must not be charged a late fee regardless of how many days past due they are.",
+      "invariant": "If account.outstandingBalance <= 0: lateFeeCharged == 0 for all values of rawDaysLate.",
+      "evidence": [
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/LateFeeService.java",
+          "symbol": "LateFeeService.calculateLateFee",
+          "line": [31, 34],
+          "excerpt": "if (MoneyUtils.isZeroOrNegative(account.getOutstandingBalance())) {\n    return BigDecimal.ZERO;\n}",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/MoneyUtils.java",
+          "symbol": "MoneyUtils.isZeroOrNegative",
+          "line": [31, 33],
+          "excerpt": "return value != null && value.compareTo(BigDecimal.ZERO) <= 0;",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.zeroBalanceProducesNoLateFee",
+          "line": [46, 51],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.creditBalanceProducesNoLateFee",
+          "line": [53, 63],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/BillingServiceTest.java",
+          "symbol": "BillingServiceTest.zeroBalanceAccountProducesNoLateFee",
+          "line": [96, 100],
+          "kind": "test"
+        }
+      ],
+      "confidence": 0.98,
+      "test_coverage": "covered",
+      "related_symbols": [
+        "com.meridian.billing.billing.LateFeeService",
+        "com.meridian.billing.util.MoneyUtils"
+      ],
+      "downstream_dependencies": [
+        "com.meridian.billing.billing.BillingService",
+        "com.meridian.billing.model.BillingResult"
+      ],
+      "risk_if_changed": "Removing or inverting the guard would cause zero-balance and credit-balance accounts to incur a late fee. Both zero and negative balances are covered by separate tests."
+    },
+    {
+      "id": "BR-05",
+      "title": "Grace-eligible accounts receive a 7-day grace period before late fees apply",
+      "description": "GracePeriodPolicy.effectiveDaysLate() subtracts GRACE_PERIOD_DAYS (7) from the raw days-late value using LegacyDateUtils.subtractDaysFloor(), which floors the result at zero. This reduction is only applied when account.isGraceEligible() is true; ineligible accounts receive the raw value unchanged.",
+      "business_context": "Certain accounts are eligible for a 7-day buffer before a late fee is assessed. The grace period is applied to the days count, not to the fee itself — an account that is exactly 7 raw days late has zero effective days late and no fee.",
+      "invariant": "For grace-eligible accounts: effectiveDaysLate == max(rawDaysLate - 7, 0). For non-grace-eligible accounts: effectiveDaysLate == rawDaysLate.",
+      "evidence": [
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/policy/GracePeriodPolicy.java",
+          "symbol": "GracePeriodPolicy.effectiveDaysLate",
+          "line": [21, 26],
+          "excerpt": "if (account.isGraceEligible()) {\n    return LegacyDateUtils.subtractDaysFloor(rawDaysLate, BillingConstants.GRACE_PERIOD_DAYS);\n}\nreturn rawDaysLate;",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/BillingConstants.java",
+          "symbol": "BillingConstants.GRACE_PERIOD_DAYS",
+          "line": 30,
+          "excerpt": "public static final int GRACE_PERIOD_DAYS = 7;",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/util/LegacyDateUtils.java",
+          "symbol": "LegacyDateUtils.subtractDaysFloor",
+          "line": [27, 30],
+          "excerpt": "int result = rawDays - daysToSubtract;\nreturn Math.max(result, 0);",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/GracePeriodPolicyTest.java",
+          "symbol": "GracePeriodPolicyTest.graceEligibleAccountAtSevenDaysHasZeroEffectiveDays",
+          "line": [37, 42],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/GracePeriodPolicyTest.java",
+          "symbol": "GracePeriodPolicyTest.nonGraceEligibleAccountAtSevenDaysHasSevenEffectiveDays",
+          "line": [45, 51],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/GracePeriodPolicyTest.java",
+          "symbol": "GracePeriodPolicyTest.graceEligibleAccountUnderSevenDaysNeverGoesNegative",
+          "line": [54, 60],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java",
+          "symbol": "LateFeeServiceTest.graceEligibleAccountSevenDaysLateProducesZeroFee",
+          "line": [82, 88],
+          "kind": "test"
+        }
+      ],
+      "confidence": 0.96,
+      "test_coverage": "covered",
+      "related_symbols": [
+        "com.meridian.billing.policy.GracePeriodPolicy",
+        "com.meridian.billing.util.LegacyDateUtils",
+        "com.meridian.billing.billing.BillingConstants"
+      ],
+      "downstream_dependencies": [
+        "com.meridian.billing.billing.LateFeeService"
+      ],
+      "risk_if_changed": "Changing GRACE_PERIOD_DAYS shifts the late-fee onset for all grace-eligible accounts. The isGraceEligible flag is set at account construction and is noted in the source only by a Q3 2009 comment on Account.java line 49 — the eligibility assignment logic is not visible in the billing module."
+    },
+    {
+      "id": "BR-06",
+      "title": "Account is enrolled in collections only when total exposure strictly exceeds $500.00",
+      "description": "CollectionsPolicy.isEligible() computes exposure as account.outstandingBalance + result.lateFeeCharged and returns true only when that sum is strictly greater than COLLECTIONS_EXPOSURE_THRESHOLD ($500.00). BillingService.runCycle() calls CollectionsService.enroll() — which adds the account id and triggers notice generation — if and only if isEligible returns true.",
+      "business_context": "Accounts representing a credit risk above $500 total exposure are escalated to the collections workflow. Accounts at exactly $500 are excluded — the comparison is strictly greater-than.",
+      "invariant": "collectionsEnrolled == (account.outstandingBalance + result.lateFeeCharged) > 500.00. Exposure == 500.00 does NOT trigger enrollment.",
+      "evidence": [
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/policy/CollectionsPolicy.java",
+          "symbol": "CollectionsPolicy.isEligible",
+          "line": [23, 26],
+          "excerpt": "BigDecimal exposure = account.getOutstandingBalance().add(result.getLateFeeCharged());\nreturn exposure.compareTo(BillingConstants.COLLECTIONS_EXPOSURE_THRESHOLD) > 0;",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/BillingConstants.java",
+          "symbol": "BillingConstants.COLLECTIONS_EXPOSURE_THRESHOLD",
+          "line": 33,
+          "excerpt": "public static final BigDecimal COLLECTIONS_EXPOSURE_THRESHOLD = new BigDecimal(\"500.00\");",
+          "kind": "source"
+        },
+        {
+          "file": "demo/legacy-billing/src/main/java/com/meridian/billing/billing/BillingService.java",
+          "symbol": "BillingService.runCycle",
+          "line": [61, 63],
+          "excerpt": "if (collectionsPolicy.isEligible(account, result)) {\n    collectionsService.enroll(account);\n}",
+          "kind": "dependency"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/CollectionsPolicyTest.java",
+          "symbol": "CollectionsPolicyTest.accountBelowThresholdIsNotEligibleForCollections",
+          "line": [42, 47],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/CollectionsPolicyTest.java",
+          "symbol": "CollectionsPolicyTest.accountAboveThresholdIsEligibleForCollections",
+          "line": [51, 57],
+          "kind": "test"
+        },
+        {
+          "file": "demo/legacy-billing/src/test/java/com/meridian/billing/CollectionsPolicyTest.java",
+          "symbol": "CollectionsPolicyTest.accountAtExactThresholdIsNotEligibleForCollections",
+          "line": [60, 67],
+          "excerpt": "// exposure exactly at threshold → not eligible (must exceed, not merely equal)\n// balance=490.00, fee=10.00 → exposure=500.00 == threshold → not enrolled",
+          "kind": "test"
+        }
+      ],
+      "confidence": 0.97,
+      "test_coverage": "covered",
+      "related_symbols": [
+        "com.meridian.billing.policy.CollectionsPolicy",
+        "com.meridian.billing.billing.BillingConstants",
+        "com.meridian.billing.collections.CollectionsService"
+      ],
+      "downstream_dependencies": [
+        "com.meridian.billing.billing.BillingService"
+      ],
+      "risk_if_changed": "Changing the strict greater-than (> 0) to greater-than-or-equal (>= 0) in the compareTo check would enroll exactly-$500 accounts. CollectionsPolicyTest.accountAtExactThresholdIsNotEligibleForCollections directly tests this boundary and would catch the regression."
+    }
+  ]
+}

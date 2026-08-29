@@ -1,0 +1,60 @@
+{
+  "workflow_id": "verification",
+  "feature_id": "feat-behavioral-contract-model",
+  "iteration": 2,
+  "timestamp": "2025-08-29T14:50:54Z",
+  "overall_status": "pass",
+  "checks": [
+    {
+      "name": "format:check",
+      "status": "skipped",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "Skipped: no 'format:check' script in package.json"
+    },
+    {
+      "name": "lint",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": null
+    },
+    {
+      "name": "typecheck",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": null
+    },
+    {
+      "name": "test",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": 142,
+      "output_summary": "25 tests passed (1 file). vitest run v4.1.11"
+    },
+    {
+      "name": "build",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": null
+    }
+  ],
+  "findings": [],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": "d31d0634be4b4e7f053de923434912aadf64beb9",
+    "changed_files": [
+      "lib/analysis/types.ts",
+      "lib/analysis/parser.ts",
+      "lib/analysis/fixtures/meridian-sample-contract.json",
+      "lib/analysis/__tests__/behavioral-contract.test.ts",
+      "vitest.config.ts",
+      "package.json",
+      "package-lock.json"
+    ],
+    "contract_path": ".agent/contracts/contract-feat-behavioral-contract-model.json",
+    "previous_report": ".agent/reports/history/20250829-000000-implementation.json"
+  }
+}

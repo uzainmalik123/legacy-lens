@@ -1,0 +1,9 @@
+{
+  "feature_id": "feat-behavioral-contract-model",
+  "status": "approved",
+  "approved_by": "human",
+  "approved_at": "2025-08-29T00:00:00Z",
+  "plan_file": ".agent/plans/plan-feat-behavioral-contract-model.md",
+  "contract_file": ".agent/contracts/contract-feat-behavioral-contract-model.json",
+  "notes": "Human approval via /approve-plan command."
+}

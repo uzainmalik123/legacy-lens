@@ -1,0 +1,338 @@
+{
+  "feature_id": "feat-behavioral-contract-model",
+  "objective": "Define canonical TypeScript types and Zod runtime-validation schemas for the Behavioral Contract data model, including a snake_case wire-format schema and mapper, and produce a deterministic sample JSON contract seeded with BR-01 through BR-06 from the frozen Meridian fixture.",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "priority": "must",
+      "description": "Define ConfidenceLevel as a TypeScript union type ('high' | 'medium' | 'low') derived from a Zod enum schema. This type is a UI display utility only — it is NOT a field in BehavioralRule. Export ConfidenceLevelSchema and ConfidenceLevel from lib/analysis/types.ts."
+    },
+    {
+      "id": "REQ-002",
+      "priority": "must",
+      "description": "Define TestCoverageStatus as a TypeScript union type ('covered' | 'partial' | 'uncovered' | 'unknown') derived from a Zod enum schema. Export TestCoverageStatusSchema and TestCoverageStatus from lib/analysis/types.ts."
+    },
+    {
+      "id": "REQ-003",
+      "priority": "must",
+      "description": "Define BehavioralEvidence with: file (string, required), symbol (string, optional), line (optional — number | [number, number] tuple; line numbers are 1-based integers; tuple must satisfy start <= end), excerpt (string, optional), kind (required discriminator: 'source' | 'test' | 'comment' | 'constant' | 'caller' | 'document'). The Zod schema uses z.union([z.number().int().min(1), z.tuple([z.number().int().min(1), z.number().int().min(1)])]) for line, with a refinement ensuring end >= start for the tuple case."
+    },
+    {
+      "id": "REQ-004",
+      "priority": "must",
+      "description": "Define BehavioralRule with required fields: id (string), title (string), description (string), businessContext (string), invariant (string), evidence (BehavioralEvidence[], min 1 item), confidence (number, z.number().min(0).max(1)), testCoverage (TestCoverageStatus), relatedSymbols (string[]), downstreamDependencies (string[]), riskIfChanged (string)."
+    },
+    {
+      "id": "REQ-005",
+      "priority": "must",
+      "description": "Define BehavioralContract with required fields: analysisId (string), generatedAt (z.string().datetime() — strict ISO 8601 with timezone), sourceFixture (string), rules (BehavioralRule[], min 1 item)."
+    },
+    {
+      "id": "REQ-006",
+      "priority": "must",
+      "description": "Export from lib/analysis/types.ts: Zod schemas BehavioralEvidenceSchema, BehavioralRuleSchema, BehavioralContractSchema, ConfidenceLevelSchema, TestCoverageStatusSchema; TypeScript types BehavioralEvidence, BehavioralRule, BehavioralContract, ConfidenceLevel, TestCoverageStatus (all via z.infer). Use Zod v4 APIs. The installed version is 4.4.3."
+    },
+    {
+      "id": "REQ-007",
+      "priority": "must",
+      "description": "Produce a development-only sample fixture at lib/analysis/fixtures/meridian-sample-contract.json. The fixture must: (a) be valid snake_case JSON matching the PRD §20.1 wire format; (b) contain exactly 6 rules with ids BR-01 through BR-06; (c) include a top-level '_fixture_note' key with value 'DEVELOPMENT FIXTURE — not analysis agent output. Do not use as pipeline output.'; (d) be authored by reading demo/legacy-billing/src/ Java source files only — GROUND_TRUTH.md, LEGACY_FIXTURE_SPEC.md, ANALYSIS_SCOPE.md, and PROPOSED_CHANGE.md must not be read during fixture authoring."
+    },
+    {
+      "id": "REQ-008",
+      "priority": "must",
+      "description": "Add vitest to devDependencies in package.json at the latest stable version compatible with the project's existing Node and frontend toolchain. Do not upgrade Node, Next.js, or other framework dependencies solely to accommodate Vitest. The selected version is 4.1.11 (vitest@latest as of repository inspection; engines: '^20.0.0 || ^22.0.0 || >=24.0.0', satisfied by Node 26.1.0). Add script 'test': 'vitest run' to the scripts block."
+    },
+    {
+      "id": "REQ-009",
+      "priority": "must",
+      "description": "Write exactly 20 unit tests in lib/analysis/__tests__/behavioral-contract.test.ts. Test IDs TEST-001 through TEST-020 as specified in the test_requirements of this contract."
+    },
+    {
+      "id": "REQ-010",
+      "priority": "should",
+      "description": "Export from lib/analysis/parser.ts: (a) parseContract(input: unknown): BehavioralContract — uses BehavioralContractSchema.safeParse(); throws ContractValidationError on failure with Zod error details in message; (b) ContractValidationError — custom Error subclass; (c) BehavioralContractWireSchema — Zod schema for the snake_case JSON wire format matching PRD §20.1; uses .passthrough() to allow unknown keys such as _fixture_note; (d) fromWireFormat(wire: BehavioralContractWire): BehavioralContract — maps snake_case keys to camelCase fields."
+    },
+    {
+      "id": "REQ-011",
+      "priority": "must",
+      "description": "No new runtime production dependencies. Zod is already installed at 4.4.3. No other runtime dependency may be added."
+    },
+    {
+      "id": "REQ-012",
+      "priority": "must",
+      "description": "The frozen demo fixture paths (demo/legacy-billing/src/**, demo/legacy-billing/pom.xml, demo/legacy-billing/proposed-change.patch, demo/legacy-billing/PROPOSED_CHANGE.md, demo/legacy-billing/LEGACY_FIXTURE_SPEC.md, demo/legacy-billing/GROUND_TRUTH.md, demo/legacy-billing/ANALYSIS_SCOPE.md) must not be modified."
+    },
+    {
+      "id": "REQ-013",
+      "priority": "must",
+      "description": "Export confidenceLabel(score: number): ConfidenceLevel from lib/analysis/types.ts. Must implement: score >= 0.80 returns 'high', score >= 0.50 and < 0.80 returns 'medium', score < 0.50 returns 'low'. Thresholds per PRD §17.3."
+    },
+    {
+      "id": "REQ-014",
+      "priority": "must",
+      "description": "BehavioralEvidenceSchema must apply a Zod refinement on the line field that rejects tuples where end < start (i.e. tuple[1] < tuple[0])."
+    }
+  ],
+  "non_requirements": [
+    "No UI components, pages, or Next.js routes.",
+    "No API routes.",
+    "No database persistence.",
+    "No analysis pipeline, diff parsing, or intent extraction logic.",
+    "No review.json or analysis-metadata.json schemas (separate feature).",
+    "No Java source parsing or analysis tooling.",
+    "No git integration.",
+    "No authentication or authorization.",
+    "No risk scoring engine.",
+    "No Reveal Intent, Behavior Map, or Blast Radius visualization.",
+    "No test generation or guardrail test execution.",
+    "The sample contract fixture is development fixture data only — not analysis agent output.",
+    "No tags or category field on BehavioralRule (out of scope).",
+    "No schema version field on BehavioralContract (deferred)."
+  ],
+  "allowed_paths": [
+    "lib/**",
+    "vitest.config.ts",
+    "package.json",
+    "package-lock.json"
+  ],
+  "forbidden_paths": [
+    "demo/legacy-billing/src/**",
+    "demo/legacy-billing/pom.xml",
+    "demo/legacy-billing/proposed-change.patch",
+    "demo/legacy-billing/PROPOSED_CHANGE.md",
+    "demo/legacy-billing/LEGACY_FIXTURE_SPEC.md",
+    "demo/legacy-billing/GROUND_TRUTH.md",
+    "demo/legacy-billing/ANALYSIS_SCOPE.md",
+    "app/**",
+    ".env",
+    ".env.*"
+  ],
+  "expected_files": {
+    "created": [
+      "lib/analysis/types.ts",
+      "lib/analysis/parser.ts",
+      "lib/analysis/fixtures/meridian-sample-contract.json",
+      "lib/analysis/__tests__/behavioral-contract.test.ts",
+      "vitest.config.ts"
+    ],
+    "modified": [
+      "package.json",
+      "package-lock.json"
+    ],
+    "deleted": []
+  },
+  "dependencies": {
+    "runtime": [],
+    "dev": [
+      {
+        "name": "vitest",
+        "version": "^4.1.11",
+        "justification": "No test runner is currently installed. vitest@latest (4.1.11) is the latest stable release; its engine constraint (^20.0.0 || ^22.0.0 || >=24.0.0) is satisfied by the project's Node 26.1.0. Vitest is zero-config for TypeScript, works with the existing tsconfig without additional transformers, and the verification harness (verify.sh) discovers the 'test' npm script and runs it. Node's built-in node:test would require tsx (also not installed) for TypeScript transformation, providing no net dependency reduction. ^3.0.0 was rejected because it is no longer the latest stable line."
+      }
+    ]
+  },
+  "test_requirements": [
+    {
+      "id": "TEST-001",
+      "type": "unit",
+      "description": "A fully valid BehavioralContract with all required fields (including boundary confidence values 0.0 and 1.0 tested in separate assertions) passes BehavioralContractSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-006"
+    },
+    {
+      "id": "TEST-002",
+      "type": "unit",
+      "description": "A contract where a rule's evidence array is empty ([]) fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-003",
+      "type": "unit",
+      "description": "A contract where confidence is 1.1 (greater than 1.0) fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-004",
+      "type": "unit",
+      "description": "A contract where confidence is -0.1 (less than 0.0) fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-005",
+      "type": "unit",
+      "description": "A contract missing the top-level rules array fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-006",
+      "type": "unit",
+      "description": "A rule missing the required 'id' field fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-007",
+      "type": "unit",
+      "description": "A rule missing the required 'title' field fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-008",
+      "type": "unit",
+      "description": "An evidence item missing the required 'file' field fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-009",
+      "type": "unit",
+      "description": "An invalid ConfidenceLevel string (e.g. 'very-high') fails ConfidenceLevelSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-001"
+    },
+    {
+      "id": "TEST-010",
+      "type": "unit",
+      "description": "An invalid TestCoverageStatus string (e.g. 'fully-covered') fails TestCoverageStatusSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-011",
+      "type": "unit",
+      "description": "The meridian-sample-contract.json fixture (imported as JSON) passes BehavioralContractWireSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-012",
+      "type": "unit",
+      "description": "parseContract() throws ContractValidationError when called with an empty object {}.",
+      "requirement_ref": "REQ-010"
+    },
+    {
+      "id": "TEST-013",
+      "type": "unit",
+      "description": "parseContract() returns a typed BehavioralContract when called with a valid camelCase contract-shaped object.",
+      "requirement_ref": "REQ-010"
+    },
+    {
+      "id": "TEST-014",
+      "type": "unit",
+      "description": "fromWireFormat() successfully maps a valid snake_case wire object to a BehavioralContract with camelCase field names (e.g. analysis_id becomes analysisId, business_context becomes businessContext).",
+      "requirement_ref": "REQ-010"
+    },
+    {
+      "id": "TEST-015",
+      "type": "unit",
+      "description": "A valid snake_case wire-format object passes BehavioralContractWireSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-010"
+    },
+    {
+      "id": "TEST-016",
+      "type": "unit",
+      "description": "An evidence item with line: [10, 25] (valid range tuple, start <= end) passes BehavioralEvidenceSchema.safeParse() with success: true.",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-017",
+      "type": "unit",
+      "description": "An evidence item with line: 0 (invalid — 0 is not a valid 1-based line number) fails BehavioralEvidenceSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-018",
+      "type": "unit",
+      "description": "An evidence item missing the required 'kind' field fails BehavioralEvidenceSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-019",
+      "type": "unit",
+      "description": "A contract with generatedAt: 'not-a-date' (invalid ISO 8601) fails BehavioralContractSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-020",
+      "type": "unit",
+      "description": "An evidence item with line: [25, 10] (end < start — invalid range) fails BehavioralEvidenceSchema.safeParse() with success: false.",
+      "requirement_ref": "REQ-014"
+    }
+  ],
+  "security_requirements": [
+    {
+      "id": "SEC-001",
+      "description": "All runtime input passed to parseContract() must go through Zod schema validation before any field is accessed. No raw 'as' type assertions on untrusted input are permitted.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-002",
+      "description": "No .env files or credentials are read by any file in this feature. This feature is pure data modeling with no I/O beyond in-memory validation.",
+      "category": "configuration"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-001",
+      "automated": true,
+      "description": "'npm test' (vitest run) exits 0 with all 20 tests passing — no failures, no skipped tests."
+    },
+    {
+      "id": "AC-002",
+      "automated": true,
+      "description": "'npm run lint' exits 0 with no new lint errors introduced by this feature."
+    },
+    {
+      "id": "AC-003",
+      "automated": true,
+      "description": "'tsc --noEmit' exits 0 — all TypeScript types in the new files are valid with no type errors."
+    },
+    {
+      "id": "AC-004",
+      "automated": true,
+      "description": "BehavioralContractSchema, BehavioralRuleSchema, BehavioralEvidenceSchema, ConfidenceLevelSchema, and TestCoverageStatusSchema are named exports of lib/analysis/types.ts."
+    },
+    {
+      "id": "AC-005",
+      "automated": true,
+      "description": "TypeScript types BehavioralContract, BehavioralRule, BehavioralEvidence, ConfidenceLevel, and TestCoverageStatus are named exports of lib/analysis/types.ts."
+    },
+    {
+      "id": "AC-006",
+      "automated": true,
+      "description": "parseContract, ContractValidationError, fromWireFormat, and BehavioralContractWireSchema are named exports of lib/analysis/parser.ts."
+    },
+    {
+      "id": "AC-007",
+      "automated": true,
+      "description": "lib/analysis/fixtures/meridian-sample-contract.json is a valid JSON file whose top-level rules array has exactly 6 items with ids BR-01, BR-02, BR-03, BR-04, BR-05, BR-06 in order."
+    },
+    {
+      "id": "AC-008",
+      "automated": true,
+      "description": "git diff --name-only shows no files modified under demo/legacy-billing/."
+    },
+    {
+      "id": "AC-009",
+      "automated": false,
+      "description": "Human review: each of the 6 sample rules has a plausible business description, at least one evidence item whose 'file' field references a real Java source path under demo/legacy-billing/src/, and the rule was derived by reading source code — not from GROUND_TRUTH.md."
+    },
+    {
+      "id": "AC-010",
+      "automated": true,
+      "description": "A valid snake_case wire-format object passes BehavioralContractWireSchema.safeParse() with success: true (verified in TEST-015)."
+    },
+    {
+      "id": "AC-011",
+      "automated": true,
+      "description": "fromWireFormat is exported from lib/analysis/parser.ts and maps snake_case fields to camelCase fields correctly (verified in TEST-014)."
+    },
+    {
+      "id": "AC-012",
+      "automated": true,
+      "description": "confidenceLabel(0.85) returns 'high', confidenceLabel(0.65) returns 'medium', confidenceLabel(0.40) returns 'low'."
+    }
+  ],
+  "change_budget": {
+    "files_changed": 7,
+    "lines_added": 500,
+    "lines_removed": 0
+  },
+  "iteration_limit": 10,
+  "status": "approved",
+  "approved_at": "2025-08-29T00:00:00Z"
+}

@@ -1,0 +1,53 @@
+{
+  "workflow_id": "implementation",
+  "feature_id": "feat-behavioral-contract-model",
+  "iteration": 1,
+  "timestamp": "2025-08-29T00:00:00Z",
+  "overall_status": "pass",
+  "checks": [
+    {
+      "name": "lint",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": null
+    },
+    {
+      "name": "typecheck",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": null
+    },
+    {
+      "name": "test",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": 140,
+      "output_summary": "25 tests passed (1 file). vitest run v4.1.11"
+    },
+    {
+      "name": "build",
+      "status": "pass",
+      "exit_code": 0,
+      "duration_ms": null,
+      "output_summary": null
+    }
+  ],
+  "findings": [],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": null,
+    "changed_files": [
+      "lib/analysis/types.ts",
+      "lib/analysis/parser.ts",
+      "lib/analysis/fixtures/meridian-sample-contract.json",
+      "lib/analysis/__tests__/behavioral-contract.test.ts",
+      "vitest.config.ts",
+      "package.json",
+      "package-lock.json"
+    ],
+    "contract_path": ".agent/contracts/contract-feat-behavioral-contract-model.json",
+    "previous_report": null
+  }
+}

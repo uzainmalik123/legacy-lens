@@ -1,0 +1,116 @@
+{
+  "workflow_id": "security-review",
+  "feature_id": "feat-behavioral-contract-model",
+  "iteration": 1,
+  "timestamp": "2025-08-29T14:55:00Z",
+  "overall_status": "pass",
+  "checks": [
+    {
+      "name": "authentication-authorisation",
+      "status": "skipped",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "No routes, API endpoints, or server actions in scope."
+    },
+    {
+      "name": "input-validation",
+      "status": "pass",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "parseContract() accepts unknown, delegates immediately to BehavioralContractSchema.safeParse(). No raw 'as' casts on untrusted input."
+    },
+    {
+      "name": "output-handling",
+      "status": "skipped",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "No HTML rendering, templates, or log output in scope."
+    },
+    {
+      "name": "injection",
+      "status": "skipped",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "No SQL, shell commands, or XML/template rendering in scope."
+    },
+    {
+      "name": "ssrf",
+      "status": "skipped",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "No outbound HTTP requests in scope."
+    },
+    {
+      "name": "path-traversal",
+      "status": "skipped",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "No runtime file system access. Fixture is a static compile-time import."
+    },
+    {
+      "name": "secret-exposure",
+      "status": "pass",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "grep over lib/ and vitest.config.ts for process.env, NEXT_PUBLIC_, api_key, secret, token, password, credential — zero matches."
+    },
+    {
+      "name": "dependency-security",
+      "status": "pass",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "vitest 4.1.11 — devDependency only, no known CVEs, version range ^4.1.11 (minor/patch float only)."
+    },
+    {
+      "name": "unsafe-configuration",
+      "status": "pass",
+      "exit_code": null,
+      "duration_ms": null,
+      "output_summary": "strict:true in tsconfig. No dangerouslyAllowSVG. No CORS wildcards. No NEXT_PUBLIC_ secrets. CSP headers absent (pre-existing gap, not introduced by this feature)."
+    }
+  ],
+  "findings": [
+    {
+      "id": "sec-001",
+      "severity": "info",
+      "category": "configuration",
+      "file": "next.config.ts",
+      "line": null,
+      "message": "Content Security Policy headers are not configured. This is a pre-existing gap unrelated to this feature.",
+      "evidence": "next.config.ts contains only reactCompiler: true — no headers() configuration.",
+      "suggested_action": "Track for a future hardening pass. When the application serves user-facing pages, add a headers() block in next.config.ts defining a strict Content-Security-Policy that restricts script-src, object-src, and base-uri. This must be done in a dedicated security hardening feature, not in this data-modelling feature.",
+      "reproducible": true,
+      "status": "accepted_risk",
+      "resolved_at": null,
+      "resolved_by": null
+    },
+    {
+      "id": "sec-002",
+      "severity": "info",
+      "category": "configuration",
+      "file": "lib/analysis/parser.ts",
+      "line": 80,
+      "message": "BehavioralContractWireSchema and its child schemas use .passthrough(), allowing unknown keys through the parsed object. This is intentional per REQ-010 and PRD §20.1.",
+      "evidence": "BehavioralContractWireSchema = z.object({...}).passthrough() at lines 80-87; BehavioralRuleWireSchema at line 64-78; BehavioralEvidenceWireSchema at lines 38-62.",
+      "suggested_action": "No action required for this feature. If the wire format is later stabilised and unknown keys should be rejected, replace .passthrough() with .strict() in BehavioralContractWireSchema, BehavioralRuleWireSchema, and BehavioralEvidenceWireSchema. This would be a deliberate breaking change to the wire protocol and must be coordinated with the analysis pipeline feature.",
+      "reproducible": true,
+      "status": "accepted_risk",
+      "resolved_at": null,
+      "resolved_by": null
+    }
+  ],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": "d31d0634be4b4e7f053de923434912aadf64beb9",
+    "changed_files": [
+      "lib/analysis/types.ts",
+      "lib/analysis/parser.ts",
+      "lib/analysis/fixtures/meridian-sample-contract.json",
+      "lib/analysis/__tests__/behavioral-contract.test.ts",
+      "vitest.config.ts",
+      "package.json"
+    ],
+    "contract_path": ".agent/contracts/contract-feat-behavioral-contract-model.json",
+    "previous_report": ".agent/reports/history/20250829-145054-verification.json"
+  }
+}

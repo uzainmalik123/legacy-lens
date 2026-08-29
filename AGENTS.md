@@ -113,3 +113,20 @@ source files.
 delete application source files.  
 **The Implementer and Fixer** are the only agents authorised to change application
 source, and only within the scope of the approved plan.
+
+### ROZEN FIXTURE RULE
+
+The following paths are frozen baseline assets:
+
+demo/legacy-billing/src/**
+demo/legacy-billing/pom.xml
+demo/legacy-billing/proposed-change.patch
+demo/legacy-billing/PROPOSED_CHANGE.md
+
+Do not modify these files during Legacy Lens product implementation.
+
+They may only be changed when the user explicitly requests a fixture revision.
+
+Legacy Lens analysis may read only the permitted analysis inputs defined separately.
+
+Do not "improve", refactor, format, modernize, or add tests to the frozen fixture during unrelated feature work.

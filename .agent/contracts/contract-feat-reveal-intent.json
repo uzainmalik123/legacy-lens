@@ -1,0 +1,284 @@
+{
+  "feature_id": "feat-reveal-intent",
+  "objective": "Add a 'Reveal Intent' toggle to the Core Review Workspace that, when activated, displays a structured intent panel (business role, invariants, related rules, dependencies, evidence, confidence) sourced from the existing RevealIntent fixture via the established fixture→Zod→mapper→domain→UI pipeline.",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "priority": "must",
+      "description": "FindingsPane must contain a prominently visible 'Reveal Intent' button within the F-001 finding detail area, visible without scrolling on a 1280 px wide viewport."
+    },
+    {
+      "id": "REQ-002",
+      "priority": "must",
+      "description": "lib/review-workspace/loader.ts must be extended: import meridian-sample-intent.json, parse it through RevealIntentWireSchema.parse(), map via intentFromWireFormat(), and add the resulting RevealIntent to the MeridianReviewSession interface as an 'intent' field. No raw JSON field access beyond the parse step."
+    },
+    {
+      "id": "REQ-003",
+      "priority": "must",
+      "description": "app/page.tsx must pass the intent field from getMeridianReviewSession() as a prop to FindingsPane."
+    },
+    {
+      "id": "REQ-004",
+      "priority": "must",
+      "description": "FindingsPane must accept an optional 'intent?: RevealIntent' prop. When intent is absent, the component must render identically to its current Feature 3 behaviour — no regressions to TEST-201 through TEST-210."
+    },
+    {
+      "id": "REQ-005",
+      "priority": "must",
+      "description": "Create app/components/IntentPanel.tsx as a Client Component. It must accept intent: RevealIntent and contract: BehavioralContract as props and render all of: (1) Business Role from intent.businessRole, (2) Intent Summary from intent.summary, (3) Behavioral Invariants as a bullet list from intent.invariants, (4) Related Behavioral Rules as pill/badge list with rule titles resolved from contract.rules using intent.relatedBehaviorRuleIds, (5) Dependencies list from intent.dependencies, (6) Confidence formatted via formatConfidence() from lib/review-workspace/confidence.ts, (7) Evidence items from intent.evidence using file, symbol, line range, kind, and excerpt. No domain text may be hardcoded in the component."
+    },
+    {
+      "id": "REQ-006",
+      "priority": "must",
+      "description": "IntentPanel must visually distinguish inferred elements from observed facts. businessRole and summary must be labeled with a visible 'INFERRED' tag. invariants must be labeled 'OBSERVED'. Evidence items must display their 'kind' field value as a visible tag (source, test, dependency, change). Labels are visual only — no data-level changes."
+    },
+    {
+      "id": "REQ-007",
+      "priority": "must",
+      "description": "The Reveal Intent action is a toggle. When the panel is closed, the button reads 'Reveal Intent'. When the panel is open, the button reads 'Hide Intent'. A second click collapses the panel. State is local React state inside FindingsPane."
+    },
+    {
+      "id": "REQ-008",
+      "priority": "must",
+      "description": "The intent panel entry and exit must use CSS transitions only (no JS animation libraries). Entry transition must complete in 250 ms or less (ease-out). Exit transition must complete in 150 ms or less (ease-in). The transition must not cause layout shift in DiffPane or ReviewHeader."
+    },
+    {
+      "id": "REQ-009",
+      "priority": "must",
+      "description": "Extract shortFilePath and formatLineRange helper functions from app/components/FindingsPane.tsx into lib/review-workspace/evidence-format.ts. Update FindingsPane.tsx to import them from evidence-format.ts. IntentPanel.tsx must also import them from evidence-format.ts. No logic may be duplicated."
+    },
+    {
+      "id": "REQ-010",
+      "priority": "must",
+      "description": "Create app/__tests__/reveal-intent.test.tsx with exactly tests TEST-301 through TEST-308 as specified in the test requirements. All must pass."
+    }
+  ],
+  "non_requirements": [
+    "No real Bob analysis pipeline.",
+    "No repository scanning, Java parsing, or git-diff generation.",
+    "No tab navigation (Review / Intent / Behavior Map / Tests tabs).",
+    "No Behavior Map or graph visualization.",
+    "No blast-radius visualization.",
+    "No Generate Guardrail Test button.",
+    "No chat interface or conversation UI.",
+    "No new npm runtime dependencies.",
+    "No API routes or database.",
+    "No loading/analysis-progress UI.",
+    "No before/after behavior comparison.",
+    "No multi-intent support (one RevealIntent per session).",
+    "No redesign of the DiffPane or ReviewHeader.",
+    "Do not modify demo/legacy-billing/src/**, pom.xml, proposed-change.patch, PROPOSED_CHANGE.md.",
+    "Do not modify lib/analysis/types.ts, parser.ts, review.ts, intent.ts, blast-radius.ts, metadata.ts.",
+    "Do not modify any lib/analysis/fixtures/*.json file.",
+    "Do not modify lib/analysis/__tests__/behavioral-contract.test.ts or data-foundation.test.ts.",
+    "Do not modify vitest.config.ts or package.json."
+  ],
+  "allowed_paths": [
+    "lib/review-workspace/loader.ts",
+    "lib/review-workspace/evidence-format.ts",
+    "app/page.tsx",
+    "app/components/FindingsPane.tsx",
+    "app/components/IntentPanel.tsx",
+    "app/__tests__/reveal-intent.test.tsx"
+  ],
+  "forbidden_paths": [
+    "demo/legacy-billing/src/**",
+    "demo/legacy-billing/pom.xml",
+    "demo/legacy-billing/proposed-change.patch",
+    "demo/legacy-billing/PROPOSED_CHANGE.md",
+    "demo/legacy-billing/LEGACY_FIXTURE_SPEC.md",
+    "demo/legacy-billing/GROUND_TRUTH.md",
+    "demo/legacy-billing/ANALYSIS_SCOPE.md",
+    "lib/analysis/types.ts",
+    "lib/analysis/parser.ts",
+    "lib/analysis/review.ts",
+    "lib/analysis/intent.ts",
+    "lib/analysis/blast-radius.ts",
+    "lib/analysis/metadata.ts",
+    "lib/analysis/__tests__/behavioral-contract.test.ts",
+    "lib/analysis/__tests__/data-foundation.test.ts",
+    "lib/analysis/fixtures/meridian-sample-contract.json",
+    "lib/analysis/fixtures/meridian-sample-review.json",
+    "lib/analysis/fixtures/meridian-sample-intent.json",
+    "lib/analysis/fixtures/meridian-sample-blast-radius.json",
+    "lib/analysis/fixtures/meridian-sample-metadata.json",
+    "vitest.config.ts",
+    "package.json",
+    ".env",
+    ".env.*"
+  ],
+  "expected_files": {
+    "created": [
+      "lib/review-workspace/evidence-format.ts",
+      "app/components/IntentPanel.tsx",
+      "app/__tests__/reveal-intent.test.tsx"
+    ],
+    "modified": [
+      "lib/review-workspace/loader.ts",
+      "app/page.tsx",
+      "app/components/FindingsPane.tsx"
+    ],
+    "deleted": []
+  },
+  "dependencies": {
+    "runtime": [],
+    "dev": []
+  },
+  "test_requirements": [
+    {
+      "id": "TEST-301",
+      "type": "unit",
+      "description": "FindingsPane renders a button with text 'Reveal Intent' when the intent prop is provided.",
+      "requirement_ref": "REQ-001"
+    },
+    {
+      "id": "TEST-302",
+      "type": "unit",
+      "description": "Clicking the 'Reveal Intent' button causes the intent panel to appear in the DOM (IntentPanel content is visible).",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-303",
+      "type": "unit",
+      "description": "IntentPanel renders intent.businessRole text from the Meridian fixture (contains text about computing late fee).",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-304",
+      "type": "unit",
+      "description": "IntentPanel renders at least the first behavioral invariant from intent.invariants (the zero-balance guard text).",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-305",
+      "type": "unit",
+      "description": "IntentPanel renders confidence as a percentage string — for intent.confidence 0.95, the rendered output contains '95%'.",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-306",
+      "type": "unit",
+      "description": "IntentPanel renders an evidence item containing 'MoneyUtils.java' from intent.evidence.",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-307",
+      "type": "unit",
+      "description": "IntentPanel renders 'BR-01' from intent.relatedBehaviorRuleIds.",
+      "requirement_ref": "REQ-005"
+    },
+    {
+      "id": "TEST-308",
+      "type": "unit",
+      "description": "Clicking 'Reveal Intent' a second time (when the panel is open) removes the intent panel content from the DOM.",
+      "requirement_ref": "REQ-007"
+    }
+  ],
+  "security_requirements": [
+    {
+      "id": "SEC-301",
+      "description": "intent data from meridian-sample-intent.json flows through RevealIntentWireSchema.parse() in loader.ts before reaching any UI component — no raw JSON field is accessed before validation.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-302",
+      "description": "IntentPanel receives and renders only a typed RevealIntent domain model — no raw JSON, no user-provided input, no external URLs.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-303",
+      "description": "No external URLs, network I/O, fetch calls, or API routes are introduced by this feature.",
+      "category": "configuration"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-401",
+      "automated": true,
+      "description": "'npm test' exits 0: all prior tests TEST-001 through TEST-210 still pass, and new tests TEST-301 through TEST-308 pass."
+    },
+    {
+      "id": "AC-402",
+      "automated": true,
+      "description": "'npm run lint' exits 0 with no new lint errors or warnings."
+    },
+    {
+      "id": "AC-403",
+      "automated": true,
+      "description": "'tsc --noEmit' exits 0 with no TypeScript errors."
+    },
+    {
+      "id": "AC-404",
+      "automated": true,
+      "description": "'npm run build' exits 0."
+    },
+    {
+      "id": "AC-405",
+      "automated": false,
+      "description": "On a 1280 px viewport, the 'Reveal Intent' button is visible in the FindingsPane when F-001 is selected, without scrolling."
+    },
+    {
+      "id": "AC-406",
+      "automated": false,
+      "description": "Clicking 'Reveal Intent' reveals a panel whose first visible text block contains the business role of LateFeeService.calculateLateFee from the fixture."
+    },
+    {
+      "id": "AC-407",
+      "automated": false,
+      "description": "The panel shows at least one behavioral invariant as a bullet item."
+    },
+    {
+      "id": "AC-408",
+      "automated": false,
+      "description": "Evidence items in the panel show MoneyUtils.java in the file path."
+    },
+    {
+      "id": "AC-409",
+      "automated": false,
+      "description": "'BR-01' is visible in the related rules section of the intent panel."
+    },
+    {
+      "id": "AC-410",
+      "automated": false,
+      "description": "Confidence is displayed as '95%' in the intent panel."
+    },
+    {
+      "id": "AC-411",
+      "automated": false,
+      "description": "Button label is 'Reveal Intent' when closed and 'Hide Intent' when open."
+    },
+    {
+      "id": "AC-412",
+      "automated": false,
+      "description": "Clicking 'Hide Intent' collapses the panel and restores the 'Reveal Intent' label."
+    },
+    {
+      "id": "AC-413",
+      "automated": false,
+      "description": "Panel reveal uses a visible CSS transition; the panel does not appear/disappear instantaneously."
+    },
+    {
+      "id": "AC-414",
+      "automated": true,
+      "description": "'git diff --name-only HEAD' shows no changes to demo/legacy-billing/**."
+    },
+    {
+      "id": "AC-415",
+      "automated": false,
+      "description": "DiffPane and ReviewHeader are visually unchanged when the intent panel is open."
+    },
+    {
+      "id": "AC-416",
+      "automated": false,
+      "description": "businessRole and summary sections in the intent panel each display a visible 'INFERRED' label; invariants section displays a visible 'OBSERVED' label."
+    }
+  ],
+  "change_budget": {
+    "files_changed": 6,
+    "lines_added": 400,
+    "lines_removed": 20
+  },
+  "iteration_limit": 10,
+  "status": "approved",
+  "approved_at": "2026-08-29T13:00:00Z"
+}

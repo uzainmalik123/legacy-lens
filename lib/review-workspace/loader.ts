@@ -8,6 +8,7 @@
 import reviewWireJson from "@/lib/analysis/fixtures/meridian-sample-review.json";
 import contractWireJson from "@/lib/analysis/fixtures/meridian-sample-contract.json";
 import metadataWireJson from "@/lib/analysis/fixtures/meridian-sample-metadata.json";
+import intentWireJson from "@/lib/analysis/fixtures/meridian-sample-intent.json";
 
 import {
   ReviewReportWireSchema,
@@ -27,6 +28,12 @@ import {
   type AnalysisMetadata,
 } from "@/lib/analysis/metadata";
 
+import {
+  RevealIntentWireSchema,
+  intentFromWireFormat,
+  type RevealIntent,
+} from "@/lib/analysis/intent";
+
 // ---------------------------------------------------------------------------
 // MeridianReviewSession — the complete dataset for the review workspace
 // ---------------------------------------------------------------------------
@@ -35,21 +42,25 @@ export interface MeridianReviewSession {
   report: ReviewReport;
   contract: BehavioralContract;
   metadata: AnalysisMetadata;
+  intent: RevealIntent;
 }
 
 // ---------------------------------------------------------------------------
 // getMeridianReviewSession — parse and map all fixture data
 // SEC-001: all JSON goes through WireSchema.parse() before any field is accessed.
+// SEC-301: intent JSON flows through RevealIntentWireSchema.parse() before mapping.
 // ---------------------------------------------------------------------------
 
 export function getMeridianReviewSession(): MeridianReviewSession {
   const reportWire = ReviewReportWireSchema.parse(reviewWireJson);
   const contractWire = BehavioralContractWireSchema.parse(contractWireJson);
   const metadataWire = AnalysisMetadataWireSchema.parse(metadataWireJson);
+  const intentWire = RevealIntentWireSchema.parse(intentWireJson);
 
   return {
     report: reviewFromWireFormat(reportWire),
     contract: fromWireFormat(contractWire),
     metadata: metadataFromWireFormat(metadataWire),
+    intent: intentFromWireFormat(intentWire),
   };
 }

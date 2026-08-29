@@ -9,7 +9,10 @@
 import { useState } from "react";
 import type { ReviewFinding } from "@/lib/analysis/review";
 import type { BehavioralContract } from "@/lib/analysis/types";
+import type { RevealIntent } from "@/lib/analysis/intent";
 import { formatConfidence } from "@/lib/review-workspace/confidence";
+import { shortFilePath, formatLineRange } from "@/lib/review-workspace/evidence-format";
+import IntentPanel from "@/app/components/IntentPanel";
 
 // ---------------------------------------------------------------------------
 // Helper: severity color classes
@@ -55,33 +58,12 @@ function severityColor(severity: ReviewFinding["severity"]): {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: short file path (last two segments)
-// ---------------------------------------------------------------------------
-function shortFilePath(path: string): string {
-  const parts = path.replace(/\\/g, "/").split("/");
-  if (parts.length <= 2) return path;
-  return `…/${parts.slice(-2).join("/")}`;
-}
-
-// ---------------------------------------------------------------------------
-// Helper: format line range
-// ---------------------------------------------------------------------------
-function formatLineRange(
-  line: number | [number, number] | undefined
-): string | null {
-  if (line === undefined) return null;
-  if (Array.isArray(line)) {
-    return line[0] === line[1] ? `L${line[0]}` : `L${line[0]}–${line[1]}`;
-  }
-  return `L${line}`;
-}
-
-// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 interface FindingsPaneProps {
   findings: ReviewFinding[];
   contract: BehavioralContract;
+  intent?: RevealIntent;
 }
 
 // ---------------------------------------------------------------------------
@@ -252,9 +234,15 @@ function EvidenceList({ evidence }: { evidence: ReviewFinding["evidence"] }) {
 function FindingDetail({
   finding,
   contract,
+  intent,
+  showIntent,
+  onToggleIntent,
 }: {
   finding: ReviewFinding;
   contract: BehavioralContract;
+  intent?: RevealIntent;
+  showIntent: boolean;
+  onToggleIntent: () => void;
 }) {
   const colors = severityColor(finding.severity);
   const conf = formatConfidence(finding.confidence);
@@ -425,6 +413,56 @@ function FindingDetail({
           {finding.recommendedAction}
         </p>
       </Section>
+
+      {/* Reveal Intent toggle — only shown when intent data is available */}
+      {intent && (
+        <div>
+          <button
+            type="button"
+            onClick={onToggleIntent}
+            className="flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-semibold transition-colors w-full"
+            style={{
+              background: showIntent
+                ? "var(--surface-3)"
+                : "var(--surface-2)",
+              border: "1px solid var(--border-muted)",
+              color: showIntent
+                ? "var(--text-primary)"
+                : "var(--text-secondary)",
+              cursor: "pointer",
+            }}
+            aria-expanded={showIntent}
+          >
+            {/* Lens icon */}
+            <span
+              aria-hidden="true"
+              className="inline-block w-3.5 h-3.5 rounded-full border-2 shrink-0"
+              style={{
+                borderColor: showIntent
+                  ? "var(--risk-high)"
+                  : "var(--text-muted)",
+              }}
+            />
+            <span>{showIntent ? "Hide Intent" : "Reveal Intent"}</span>
+          </button>
+
+          {/* IntentPanel — CSS-transition-based reveal */}
+          <div
+            style={{
+              overflow: "hidden",
+              maxHeight: showIntent ? "9999px" : "0",
+              opacity: showIntent ? 1 : 0,
+              transition: showIntent
+                ? "max-height 250ms ease-out, opacity 200ms ease-out"
+                : "max-height 150ms ease-in, opacity 120ms ease-in",
+            }}
+          >
+            {showIntent && (
+              <IntentPanel intent={intent} contract={contract} />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -458,9 +496,17 @@ function Section({
 export default function FindingsPane({
   findings,
   contract,
+  intent,
 }: FindingsPaneProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showIntent, setShowIntent] = useState(false);
   const selectedFinding = findings[selectedIndex];
+
+  function handleSelectFinding(idx: number) {
+    setSelectedIndex(idx);
+    // Collapse intent panel when switching findings
+    setShowIntent(false);
+  }
 
   return (
     <section
@@ -508,13 +554,19 @@ export default function FindingsPane({
           <FindingsList
             findings={findings}
             selectedIndex={selectedIndex}
-            onSelect={setSelectedIndex}
+            onSelect={handleSelectFinding}
           />
 
           {/* Selected finding detail */}
           {selectedFinding && (
             <div className="flex-1 overflow-y-auto" style={{ background: "var(--surface-1)" }}>
-              <FindingDetail finding={selectedFinding} contract={contract} />
+              <FindingDetail
+                finding={selectedFinding}
+                contract={contract}
+                intent={intent}
+                showIntent={showIntent}
+                onToggleIntent={() => setShowIntent((v) => !v)}
+              />
             </div>
           )}
         </div>

@@ -1,0 +1,53 @@
+{
+  "workflow_id": "verification",
+  "feature_id": "feat-behavioral-contract-model",
+  "iteration": 3,
+  "timestamp": "2026-08-29T11:17:40Z",
+  "verification_status": "passed",
+  "overall_status": "passed",
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 1
+  },
+  "checks": [{
+      "name": "format:check",
+      "command": "",
+      "status": "SKIPPED",
+      "exit_code": null,
+      "output_summary": "Skipped: no 'format:check' script in package.json"
+    },{
+      "name": "lint",
+      "command": "npm run lint",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": "\n> legacy-lens@0.1.0 lint\n> eslint\n\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/behavioral-contract.test.ts\n  133:18  warning  '_rules' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  142:15  warning  '_id' is assigned a value but never used     @typescript-eslint/no-unused-vars\n  153:18  warning  '_title' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  164:17  warning  '_file' is assigned a value but never used   @typescript-eslint/no-unused-vars\n\n/home/uzi/Projects/hackathons/legacy-lens/lib/analysis/__tests__/data-foundation.test.ts\n  212:21  warning  '_findings' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  220:23  warning  '_id' is assigned a value but never used        @typescript-eslint/no-unused-vars\n  265:25  warning  '_ts' is assigned a value but never used        @typescript-eslint/no-unused-vars\n  301:18  warning  '_nodes' is assigned a value but never used     @typescript-eslint/no-unused-vars\n\n✖ 8 problems (0 errors, 8 warnings)"
+    },{
+      "name": "typecheck",
+      "command": "node_modules/.bin/tsc --noEmit",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": ""
+    },{
+      "name": "test",
+      "command": "npm run test",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": "\n> legacy-lens@0.1.0 test\n> vitest run\n\n(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:\n  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `\"type\": \"module\"` in the closest package.json\nSet `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.\n\n RUN  v4.1.11 /home/uzi/Projects/hackathons/legacy-lens\n\n ✓  lib  lib/analysis/__tests__/behavioral-contract.test.ts (20 tests) 10ms\n ✓  lib  lib/analysis/__tests__/data-foundation.test.ts (25 tests) 11ms\n ✓  app  app/__tests__/review-workspace.test.tsx (10 tests) 66ms\n ✓  app  app/__tests__/reveal-intent.test.tsx (8 tests) 83ms\n\n Test Files  4 passed (4)\n      Tests  63 passed (63)\n   Start at  16:17:43\n   Duration  487ms (transform 161ms, setup 54ms, import 421ms, tests 170ms, environment 276ms)"
+    },{
+      "name": "build",
+      "command": "npm run build",
+      "status": "PASS",
+      "exit_code": 0,
+      "output_summary": "\n> legacy-lens@0.1.0 build\n> next build\n\n▲ Next.js 16.3.3 (Turbopack)\n✓ Running next.config.ts took 13ms\n\n  Creating an optimized production build ...\n✓ Compiled successfully in 1090ms\n  Running TypeScript ...\n  Finished TypeScript in 1324ms ...\n  Collecting page data using 5 workers ...\n  Generating static pages using 5 workers (0/4) ...\n  Generating static pages using 5 workers (1/4) \r\n  Generating static pages using 5 workers (2/4) \r\n  Generating static pages using 5 workers (3/4) \r\n✓ Generating static pages using 5 workers (4/4) in 300ms\n  Finalizing page optimization ...\n\nRoute (app)\n┌ ○ /\n└ ○ /_not-found\n\n\n○  (Static)  prerendered as static content"
+    }],
+  "findings": [],
+  "metadata": {
+    "git_branch": "main",
+    "git_commit": "45a3debc2ad07f40e2f00c3b547fa2cb66aba432",
+    "package_manager": "npm",
+    "changed_files": ["app/components/FindingsPane.tsx","app/page.tsx","lib/review-workspace/loader.ts"],
+    "contract_path": null,
+    "previous_report": null
+  }
+}

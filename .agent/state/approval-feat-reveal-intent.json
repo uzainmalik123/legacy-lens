@@ -1,0 +1,9 @@
+{
+  "feature_id": "feat-reveal-intent",
+  "status": "approved",
+  "approved_by": "human",
+  "approved_at": "2026-08-29T13:00:00Z",
+  "plan_file": ".agent/plans/plan-feat-reveal-intent.md",
+  "contract_file": ".agent/contracts/contract-feat-reveal-intent.json",
+  "notes": "Human approval via /approve-plan command."
+}

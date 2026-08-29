@@ -1,178 +1,233 @@
-# Grill Report — feat-data-foundation
+# Grill Report — feat-guardrail-test
 
+**Plan:** `.agent/plans/plan-feat-guardrail-test.md`  
+**Contract:** `.agent/contracts/contract-feat-guardrail-test.json`  
 **Date:** 2026-08-29  
-**Plan:** `.agent/plans/plan-feat-data-foundation.md`  
-**Contract:** `.agent/contracts/contract-feat-data-foundation.json`  
-**Mode:** Hackathon fast mode (max 2 blocking questions)
+**Outcome:** GO — with two targeted plan/contract corrections applied
 
 ---
 
 ## Summary of Original Plan
 
-Feature 2 of the Legacy Lens data-foundation layer. Defines four new TypeScript/Zod
-modules — `review.ts`, `intent.ts`, `blast-radius.ts`, `metadata.ts` — each following
-the Feature 1 architecture: snake_case wire schema → `.passthrough()` → mapper →
-camelCase domain type. Produces four deterministic Meridian JSON fixtures and 25 unit
-tests (TEST-101 – TEST-125). Zero new dependencies; zero modifications to existing files.
+Feature 5 extends the BR-01 finding detail in `FindingsPane` with:
+1. A "TEST GAP" section (visible when `testCoverage === "uncovered"`)
+2. A "Generate Guardrail Test" button with a deterministic 2-stage transition
+3. A `GuardrailTestView` inline component showing a fixture-driven JUnit 5 characterization test
+   targeting the canonical 1500.00/12.345→12.34 rounding scenario
+
+All fixture-driven; no real Bob pipeline; frozen Java fixture untouched. 4 files created, 3 modified.
 
 ---
 
 ## Challenges Raised
 
-### C-001 — Wire types not listed as exports (MATERIAL)
+### C-01 — `setTimeout` cleanup on unmount [BLOCKER — FIXED]
 
-**Challenge:** REQ-001/002/003 require `reviewFromWireFormat(wire: ReviewReportWire):
-ReviewReport`. The type `ReviewReportWire` is `z.infer<typeof ReviewReportWireSchema>`.
-Callers (UI, pipeline) need to import this type. Neither the requirements nor AC-005/006/
-007/008 list the Wire types as named exports. An implementer could legitimately define
-them internally (`type ReviewReportWire = ...`) without exporting.
+**Raised:** REQ-008 mandates `setTimeout` for the 2-stage transition but did not specify
+cleanup. If the user selects a different finding before 900 ms, the `FindingDetail` component
+unmounts but both `setTimeout` callbacks remain scheduled. They will fire and attempt to call
+`setState` on an unmounted component — producing a React warning (or in strict mode, a
+potential double-effect bug).
 
-**Resolution:** Self-resolved. Plan and contract updated to explicitly list Wire types
-as required named exports. Specifically:
-- `ReviewReportWire` — `lib/analysis/review.ts`
-- `RevealIntentWire` — `lib/analysis/intent.ts`
-- `BlastRadiusResultWire` — `lib/analysis/blast-radius.ts`
-- `AnalysisMetadataWire` — `lib/analysis/metadata.ts`
+**Resolution:** Plan and contract updated to explicitly require both `setTimeout` handles to
+be stored and cancelled in a `useEffect` cleanup function (`clearTimeout`). The timer state
+lives in `FindingDetail` (per the preferred approach in Implementation Notes), so when
+`selectedFinding` changes, the component unmounts and the `useEffect` cleanup fires automatically.
+This is correct by construction given the component lifecycle — but the plan now mandates it
+explicitly so the implementer cannot miss it.
 
-AC-005 through AC-008 updated to include Wire types.
-
-**User answer:** N/A (self-resolved).
+**Status:** Fixed — REQ-008 updated in both plan and contract.
 
 ---
 
-### C-002 — `ReviewFinding.evidence` allows empty array (noted risk)
+### C-02 — `status` field type underspecified in GuardrailTestSchema [CORRECTNESS — FIXED]
 
-**Challenge:** PRD §FR-009 says "before a high/critical finding is surfaced, evidence
-must support the behavior claim." The plan allows `evidence: []` in `ReviewFinding`. A
-UI reading a `severity: "critical"` finding with `evidence: []` could display a
-misleading result.
+**Raised:** REQ-003 listed `status` as a domain field but did not specify its Zod type.
+If implemented as `z.string()`, it accepts any string and provides no type narrowing.
+If Feature 6 later widens it to `z.enum(["generated", "applied", "failed"])`, existing
+validated fixture data (which uses `"generated"`) still passes, but the narrowing benefit
+is lost.
 
-**Resolution:** Self-resolved as intentional. The schema layer is descriptive. The
-analysis pipeline (not the schema) enforces FR-009. The plan's Architecture Decisions
-section already explains this. No schema change warranted.
+**Resolution:** Using `z.literal("generated")` for the current feature is correct:
+- Validates that the fixture contains exactly `"generated"`
+- Is widened to `z.enum([...])` in Feature 6 by swapping a single line
+- Produces a TypeScript literal type `"generated"` for type safety today
 
-**User answer:** N/A (self-resolved).
+Plan and contract updated. Feature 6 migration path is cleaner.
 
----
-
-### C-003 — `changedLines` duplicates `LineNumberSchema` from types.ts (minor divergence risk)
-
-**Challenge:** `LineNumberSchema` is defined in `lib/analysis/types.ts` (not exported,
-internal). The plan marks `types.ts` as forbidden to modify. `review.ts` must define
-the same line-range schema inline, creating a copy. If one copy drifts, validation
-behaviour diverges.
-
-**Resolution:** Self-resolved as acceptable. The constraint is narrow (same tuple
-semantics, same refinement). Both copies are covered by their respective test suites.
-The alternative (exporting `LineNumberSchema` from `types.ts`) would modify a frozen
-file. Duplicate inline definition is the correct call.
-
-**User answer:** N/A (self-resolved).
+**Status:** Fixed — REQ-003 updated in both plan and contract.
 
 ---
 
-### C-004 — `findingsBySeverity` breakdown absent (potential future gap)
+### C-03 — Test file placement inconsistency (TEST-401–404 are schema unit tests) [RESOLVED — NO CHANGE]
 
-**Challenge:** PRD §FR-014 mentions "findings count by severity" (plural). The plan
-includes only `highRiskFindings` in `AnalysisMetadata`. A full per-severity breakdown
-(`criticalFindings`, `mediumFindings`, etc.) is absent.
+**Raised:** The project convention puts schema/mapper unit tests in `lib/analysis/__tests__/`
+(node environment, TEST-101 to TEST-125 in `data-foundation.test.ts`). The plan places
+TEST-401–414 — including schema tests 401–404 — in `app/__tests__/guardrail-test.test.tsx`
+(happy-dom environment). This is architecturally inconsistent.
 
-**Resolution:** Self-resolved. PRD §20.3 minimum wire shape shows only `high_risk_findings`.
-Minimum shape determines scope for this data-foundation feature. The analysis pipeline
-can extend the schema. No requirement added.
+**Resolution:** Since `lib/analysis/__tests__/data-foundation.test.ts` is in the forbidden
+paths list (must not modify existing tests) and creating a new lib test file would require
+adding `lib/analysis/__tests__/guardrail-test.test.ts` to `allowed_paths`, the simplest
+correct path is to put all 14 tests in `app/__tests__/guardrail-test.test.tsx`. Pure Zod
+`safeParse` and `guardrailTestFromWireFormat` calls work identically in happy-dom — the
+environment doesn't interfere with these. The inconsistency is a style issue, not a
+correctness issue.
 
-**User answer:** N/A (self-resolved).
+**Decision:** Leave as planned. If this were a production codebase, a follow-up cleanup
+ticket would move TEST-401–404 to `lib/__tests__`. For the hackathon demo, the single-file
+approach is simpler and lower risk.
 
----
-
-### C-005 — AC-010 not verified by any test assertion (minor)
-
-**Challenge:** AC-010 requires `meridian-sample-review.json` to have `id: "F-001"`,
-`severity: "high"`, and `behavior_rule_ids` containing `"BR-01"`. TEST-107 only checks
-that the fixture parses — it doesn't assert these specific field values.
-
-**Resolution:** The fixture content is controlled by the implementer and is static.
-AC-010 is verifiable by human inspection of the fixture, consistent with how Feature 1
-handled AC-009 (human review of fixture content). No additional test required.
-
-**User answer:** N/A (self-resolved).
+**Status:** No change to plan. Documented for implementer awareness.
 
 ---
 
-### C-006 — AC-011 (consistent `analysis_id`) not covered by any automated test (minor)
+### C-04 — `act()` + fake timers in Testing Library [TESTING RISK — DOCUMENTED]
 
-**Challenge:** Four fixtures must all have `analysis_id: "meridian-sample-20260829"`.
-No test explicitly asserts this. An implementer typo would only be caught by manual review.
+**Raised:** TEST-408 and TEST-409 require clicking "Generate Guardrail Test" and advancing
+fake timers to assert state transitions. In `@testing-library/react`, advancing fake timers
+that trigger React state updates requires wrapping `vi.runAllTimersAsync()` or
+`vi.advanceTimersByTimeAsync(ms)` in `act()`, or using the async variants from Testing Library.
 
-**Resolution:** Self-resolved. This is a fixture authoring constraint, not a schema
-constraint. The implementer self-certifies it and it is verifiable by inspection. Consistent
-with Feature 1's AC-009 (also non-automated). No test added.
+Without `act()`, the state update from the `setTimeout` callback fires outside React's update
+cycle, producing a "not wrapped in act()" warning and potentially making `screen.findBy*`
+assertions flaky.
 
-**User answer:** N/A (self-resolved).
+**Resolution self-applied:** The test for TEST-409 must:
+1. Use `vi.useFakeTimers()` in `beforeEach`
+2. Click the button
+3. Wrap `vi.runAllTimersAsync()` in `await act(async () => { await vi.runAllTimersAsync(); })`
+4. Then assert the generated view is rendered
 
----
+This pattern is standard for Testing Library + Vitest fake timers. The plan's Risk R-1
+documents this; the test requirement (TEST-409) description already says "after fake timers
+advance past 900 ms" — the implementer must use the async act wrapper. Added to TEST-409
+description implicitly in the risk note. No contract change needed — the description is
+prescriptive enough at the test level.
 
-## Blocking User Questions Asked
-
-**None.** All issues were self-resolvable from PRD + Feature 1 conventions.
-
----
-
-## Revised Requirements (from self-resolution)
-
-The only material change is adding Wire types as explicit named exports.
-
-### Updated REQ-003 (was: ReviewReport wire schema + mapper)
-Add: Export `ReviewReportWire` (the `z.infer` type of `ReviewReportWireSchema`) as a
-named export from `lib/analysis/review.ts`.
-
-### Updated REQ-005 (was: RevealIntent wire schema + mapper)
-Add: Export `RevealIntentWire` as a named export from `lib/analysis/intent.ts`.
-
-### Updated REQ-008 (was: BlastRadiusResult domain type + wire schema + mapper)
-Add: Export `BlastRadiusResultWire` as a named export from
-`lib/analysis/blast-radius.ts`.
-
-### Updated REQ-011 (was: AnalysisMetadata wire schema + mapper)
-Add: Export `AnalysisMetadataWire` as a named export from `lib/analysis/metadata.ts`.
+**Status:** No plan change. Implementation guidance preserved in Risk R-1.
 
 ---
 
-## Acceptance Criteria Additions / Changes
+### C-05 — Edge case: `GuardrailTestView` renders inline after Reveal Intent is already open [VISUAL CONFLICT — RESOLVED]
 
-### Updated AC-005
-Add `ReviewReportWire` to the named exports list for `lib/analysis/review.ts`.
+**Raised:** The user can open "Reveal Intent" and then (within the same finding) click
+"Generate Guardrail Test". Both `IntentPanel` and `GuardrailTestView` would expand inline
+within `FindingDetail`. The plan's scroll area handles this — both panels stack vertically
+in the `FindingDetail` overflow scroll. No layout breakage, but the finding detail area
+could become very long.
 
-### Updated AC-006
-Add `RevealIntentWire` to the named exports list for `lib/analysis/intent.ts`.
+**Resolution:** This is acceptable. The pane already scrolls. Both panels stacking is fine
+UX for a demo context. No visual conflict — `IntentPanel` renders below "Recommended Action",
+and `GuardrailTestView` renders below "Test Gap", so they don't overlap. Scroll handles length.
 
-### Updated AC-007
-Add `BlastRadiusResultWire` to the named exports list for
-`lib/analysis/blast-radius.ts`.
-
-### Updated AC-008
-Add `AnalysisMetadataWire` to the named exports list for
-`lib/analysis/metadata.ts`.
+**Status:** No change. Acceptable UX given demo context.
 
 ---
 
-## Unresolved Risks for Human Attention
+### C-06 — Edge case: finding `testCoverage === "partial"` — should Test Gap appear? [RESOLVED]
 
-1. **Pre-existing `BehavioralEvidence.kind` discrepancy** — `lib/analysis/types.ts`
-   exports `kind: "source" | "test" | "dependency" | "change"`, but the Feature 1
-   contract specification listed `"source" | "test" | "comment" | "constant" | "caller"
-   | "document"`. This feature cannot fix it (types.ts is frozen). The discrepancy
-   should be addressed in a dedicated scope-limited fix before or alongside UI
-   implementation. New fixtures authored in Feature 2 will use `"source"`, `"test"`,
-   and `"dependency"` only — the safe intersection.
+**Raised:** REQ-007 triggers on `testCoverage === "uncovered"` only. What about `"partial"`?
+
+**Resolution:** The demo fixture only has one finding (F-001) with `"uncovered"`. The existing
+coverage card already shows a highlighted treatment for `"uncovered"` or `"partial"` (the
+`isUncovered` variable in `FindingDetail` covers both). The Test Gap section only fires on
+`"uncovered"` as specified — this is the right conservative boundary. A `"partial"` finding
+has some coverage and does not warrant the "generate test" action in the same way.
+
+**Status:** No change. REQ-007 correctly scopes to `"uncovered"` only.
+
+---
+
+### C-07 — Edge case: `guardrailTest.behaviorRuleId` does not match any `finding.behaviorRuleIds` [RESOLVED]
+
+**Raised:** REQ-007 requires the condition `guardrailTest.behaviorRuleId` appears in
+`finding.behaviorRuleIds` before showing the Test Gap section. In the fixture, BR-01 appears
+in both. But if a future fixture has a mismatch (e.g. guardrail test is for BR-02 but the
+selected finding references only BR-01), the Test Gap section should not appear for that finding.
+
+**Resolution:** The condition is already correctly specified in REQ-007. The implementer must
+not hardcode "BR-01" but use the dynamic condition `finding.behaviorRuleIds.includes(guardrailTest.behaviorRuleId)`.
+This is correct for Feature 6 generalization.
+
+**Status:** No change to plan. Already correctly specified.
+
+---
+
+### C-08 — Security: `code` field rendered in `<pre>` without syntax highlighting library [VERIFIED SAFE]
+
+**Raised:** The Java code is rendered read-only in a `<pre>` block. No `dangerouslySetInnerHTML`.
+React JSX string interpolation escapes `<`, `>`, `&`, `"` automatically. There is no injection
+risk from the fixture content.
+
+**Resolution:** SEC-402 already prohibits `dangerouslySetInnerHTML`. AC-516 enforces this via
+grep. Verified safe.
+
+**Status:** No change. Confirmed by AC-516.
+
+---
+
+### C-09 — `navigator.clipboard` in happy-dom (TEST-410 context) [VERIFIED RESOLVABLE]
+
+**Raised:** The copy button requires `navigator.clipboard.writeText`. In happy-dom, this may
+be `undefined`. The plan says to silently catch. Tests should not exercise clipboard writes
+(Risk R-2). TEST-410 only asserts `guardrailTest.filename` renders — not the copy outcome.
+
+**Resolution:** No test exercises the clipboard. The copy button renders normally (Testing
+Library doesn't call it unless a test clicks it). If TEST-410 renders `GuardrailTestView`
+directly and only checks text content, no clipboard interaction occurs. Safe.
+
+**Status:** No change. Matches plan Risk R-2 mitigation.
+
+---
+
+### C-10 — Redisplaying the generated test (re-clicking Generate after it's shown) [RESOLVED]
+
+**Raised:** Once `GuardrailTestView` is displayed, what does the "Generate Guardrail Test"
+button do? The plan doesn't address hiding/re-triggering the view.
+
+**Resolution:** Once the state machine reaches `done`, the button is replaced by the
+`GuardrailTestView` — it no longer shows the "Generate Guardrail Test" button. This is the
+simplest implementation: the button is absent when the test is already shown. If the user
+wants to dismiss the view, the plan does not specify a "Hide" toggle for the guardrail test
+(unlike `IntentPanel`). Since the generated test view is the end-state of the flow, this
+is intentional — the user has committed to "generate" and the result is persistently shown
+until they switch findings.
+
+**Status:** No change. The button disappears when `stage === 'done'`. Self-consistent.
+
+---
+
+## Revised Requirements (post-grill delta only)
+
+| ID | Change |
+|---|---|
+| REQ-003 | Added: `status` field must use `z.literal("generated")` in both wire and domain schemas |
+| REQ-008 | Added: both `setTimeout` handles must be cancelled via `clearTimeout` in a `useEffect` cleanup |
+
+All other requirements unchanged.
+
+---
+
+## Acceptance Criteria Additions/Changes
+
+No new acceptance criteria. The existing AC-503 (TypeScript clean) will catch any missing
+`clearTimeout` if the implementer uses `useRef` for the timer IDs with the correct type.
 
 ---
 
 ## Go / No-Go Recommendation
 
-**GO** — with the Wire type export additions applied to the contract and plan.
+**GO**
 
-No blocking questions were needed. The plan is well-specified, architecturally
-consistent with Feature 1, appropriately scoped, and the single material gap (Wire
-type exports) is a straightforward addition. Frozen fixture is not touched. No new
-dependencies. Test coverage is sufficient for a data-contracts feature.
+The plan is well-specified and consistent with the existing codebase conventions. All
+identified risks are either low or have clear mitigations. The two targeted corrections
+(timer cleanup + status Zod literal) have been applied to both the plan and contract.
+
+No blocking questions need to go to the user:
+- All design decisions are resolvable from the PRD and existing code
+- The demo scenario is unambiguous (one finding, F-001, BR-01, `uncovered`)
+- The fixture data is fully specified down to the exact Java code
+- The test strategy is complete (14 tests covering schema, integration, component, and negative)
+
+**Recommend:** Run `/approve-plan feat-guardrail-test` to unlock implementation.

@@ -6,13 +6,15 @@
 // Selection state, finding detail, evidence, confidence, test coverage.
 // ---------------------------------------------------------------------------
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReviewFinding } from "@/lib/analysis/review";
 import type { BehavioralContract } from "@/lib/analysis/types";
 import type { RevealIntent } from "@/lib/analysis/intent";
+import type { GuardrailTest } from "@/lib/analysis/guardrail-test";
 import { formatConfidence } from "@/lib/review-workspace/confidence";
 import { shortFilePath, formatLineRange } from "@/lib/review-workspace/evidence-format";
 import IntentPanel from "@/app/components/IntentPanel";
+import GuardrailTestView from "@/app/components/GuardrailTestView";
 
 // ---------------------------------------------------------------------------
 // Helper: severity color classes
@@ -64,6 +66,7 @@ interface FindingsPaneProps {
   findings: ReviewFinding[];
   contract: BehavioralContract;
   intent?: RevealIntent;
+  guardrailTest?: GuardrailTest;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,21 +234,52 @@ function EvidenceList({ evidence }: { evidence: ReviewFinding["evidence"] }) {
 // ---------------------------------------------------------------------------
 // FindingDetail — full detail panel for the selected finding
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GenerateStage — state machine for the guardrail test generation transition
+// ---------------------------------------------------------------------------
+type GenerateStage = "idle" | "stage1" | "stage2" | "done";
+
 function FindingDetail({
   finding,
   contract,
   intent,
+  guardrailTest,
   showIntent,
   onToggleIntent,
 }: {
   finding: ReviewFinding;
   contract: BehavioralContract;
   intent?: RevealIntent;
+  guardrailTest?: GuardrailTest;
   showIntent: boolean;
   onToggleIntent: () => void;
 }) {
   const colors = severityColor(finding.severity);
   const conf = formatConfidence(finding.confidence);
+
+  // Timer-based generation transition state (lives in FindingDetail so it
+  // resets automatically when the user selects a different finding)
+  const [generateStage, setGenerateStage] = useState<GenerateStage>("idle");
+  const timer1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timer2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup both timers on unmount (REQ-008 / grill C-01)
+  useEffect(() => {
+    return () => {
+      if (timer1Ref.current !== null) clearTimeout(timer1Ref.current);
+      if (timer2Ref.current !== null) clearTimeout(timer2Ref.current);
+    };
+  }, []);
+
+  function handleGenerate() {
+    setGenerateStage("stage1");
+    timer1Ref.current = setTimeout(() => {
+      setGenerateStage("stage2");
+      timer2Ref.current = setTimeout(() => {
+        setGenerateStage("done");
+      }, 450);
+    }, 450);
+  }
 
   // Look up rule titles from contract
   const ruleEntries = finding.behaviorRuleIds.map((ruleId) => {
@@ -253,8 +287,14 @@ function FindingDetail({
     return { ruleId, title: rule?.title ?? null };
   });
 
-  const isUncovered =
-    finding.testCoverage === "uncovered" || finding.testCoverage === "partial";
+  const isUncovered = finding.testCoverage === "uncovered";
+
+  // Show Test Gap only when finding is uncovered AND guardrailTest targets
+  // a rule referenced by this finding (REQ-007)
+  const showTestGap =
+    isUncovered &&
+    guardrailTest != null &&
+    finding.behaviorRuleIds.includes(guardrailTest.behaviorRuleId);
 
   return (
     <div className="flex flex-col gap-5 px-5 py-4">
@@ -414,6 +454,109 @@ function FindingDetail({
         </p>
       </Section>
 
+      {/* Test Gap section — only when finding is uncovered and guardrail test targets this rule */}
+      {showTestGap && guardrailTest && (
+        <div
+          className="rounded-sm p-4 flex flex-col gap-3"
+          style={{
+            background: "var(--risk-high-bg)",
+            border: "1px solid var(--risk-high)",
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm"
+              style={{
+                background: "rgba(217, 95, 95, 0.20)",
+                color: "var(--risk-high)",
+              }}
+            >
+              Test Gap
+            </span>
+            <span
+              className="font-mono text-xs font-bold"
+              style={{ color: "var(--risk-high)" }}
+            >
+              {guardrailTest.behaviorRuleId}
+            </span>
+          </div>
+
+          {/* Gap explanation */}
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "var(--text-primary)" }}
+          >
+            No existing test distinguishes the current{" "}
+            <code
+              className="font-mono text-xs px-1 py-0.5 rounded-sm"
+              style={{ background: "var(--surface-3)", color: "var(--text-code)" }}
+            >
+              DOWN
+            </code>{" "}
+            behavior from{" "}
+            <code
+              className="font-mono text-xs px-1 py-0.5 rounded-sm"
+              style={{ background: "var(--surface-3)", color: "var(--text-code)" }}
+            >
+              HALF_UP
+            </code>{" "}
+            for BR-01.
+          </p>
+
+          {/* Generate button — hidden once generation is done */}
+          {generateStage === "idle" && (
+            <button
+              type="button"
+              onClick={handleGenerate}
+              className="flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-semibold w-full"
+              style={{
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-muted)",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+              }}
+            >
+              {/* Target icon */}
+              <span
+                aria-hidden="true"
+                className="inline-block w-3.5 h-3.5 rounded-full border-2 shrink-0"
+                style={{ borderColor: "var(--risk-high)" }}
+              />
+              <span>Generate Guardrail Test</span>
+            </button>
+          )}
+
+          {/* Transition messages */}
+          {(generateStage === "stage1" || generateStage === "stage2") && (
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-sm text-sm"
+              style={{
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-muted)",
+              }}
+            >
+              <span
+                aria-hidden="true"
+                className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: "var(--risk-medium)" }}
+              />
+              <span>
+                {generateStage === "stage1"
+                  ? "Preparing characterization test…"
+                  : "Building boundary scenario…"}
+              </span>
+            </div>
+          )}
+
+          {/* GuardrailTestView — shown after transition completes */}
+          {generateStage === "done" && (
+            <GuardrailTestView guardrailTest={guardrailTest} />
+          )}
+        </div>
+      )}
+
       {/* Reveal Intent toggle — only shown when intent data is available */}
       {intent && (
         <div>
@@ -497,6 +640,7 @@ export default function FindingsPane({
   findings,
   contract,
   intent,
+  guardrailTest,
 }: FindingsPaneProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showIntent, setShowIntent] = useState(false);
@@ -564,6 +708,7 @@ export default function FindingsPane({
                 finding={selectedFinding}
                 contract={contract}
                 intent={intent}
+                guardrailTest={guardrailTest}
                 showIntent={showIntent}
                 onToggleIntent={() => setShowIntent((v) => !v)}
               />

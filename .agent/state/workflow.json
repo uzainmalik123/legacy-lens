@@ -1,6 +1,6 @@
 {
   "workflow_id": "legacy-lens-agentic-workflow",
-  "feature_id": "feat-behavioral-contract-model",
+  "feature_id": "feat-guardrail-test",
   "state": "APPROVED",
   "iteration": 0,
   "max_iterations": 10,
@@ -8,7 +8,7 @@
   "scope_status": null,
   "verification_status": "passed",
   "security_status": null,
-  "last_updated": "2026-08-29T11:17:40Z",
+  "last_updated": "2026-08-29T11:48:36Z",
   "_valid_states": [
     "IDLE",
     "PLANNING",

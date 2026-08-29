@@ -1,0 +1,345 @@
+{
+  "feature_id": "feat-guardrail-test",
+  "objective": "Extend the BR-01 finding detail with a visible test-gap section and a 'Generate Guardrail Test' action that reveals a fixture-driven JUnit 5 characterization test capturing the current RoundingMode.DOWN behavior so any future regression is detected explicitly.",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "description": "The FindingDetail view inside FindingsPane must display a 'Test Gap' section below the test-coverage block when finding.testCoverage === 'uncovered', containing a gap explanation, existing test evidence, and a 'Generate Guardrail Test' button.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-002",
+      "description": "Create lib/analysis/fixtures/meridian-sample-guardrail-test.json as a development fixture with a _fixture_note field, containing: id, behavior_rule_id ('BR-01'), analysis_id, filename, framework, language, code (valid JUnit 5 Java for the 1500.00/0.00823/12.345→12.34 scenario), rationale, status, protected_behavior, boundary_scenario (balance/rate/raw_fee/current_result/proposed_result as strings), and detection_note.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-003",
+      "description": "Create lib/analysis/guardrail-test.ts with GuardrailTestSchema (camelCase Zod domain), GuardrailTestWireSchema (snake_case, .passthrough()), and guardrailTestFromWireFormat(wire) mapper. Include a SEC-001 comment on the mapper. The 'status' field must use z.literal(\"generated\") so Feature 6 can widen it to z.enum([...]) without breaking existing validated data.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-004",
+      "description": "Extend lib/review-workspace/loader.ts to import meridian-sample-guardrail-test.json, parse it through GuardrailTestWireSchema, map via guardrailTestFromWireFormat, and add guardrailTest: GuardrailTest to the MeridianReviewSession interface and return value.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-005",
+      "description": "app/page.tsx must destructure guardrailTest from getMeridianReviewSession() and pass it as guardrailTest={guardrailTest} to FindingsPane.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-006",
+      "description": "FindingsPane must accept an optional guardrailTest?: GuardrailTest prop. When absent, the component renders identically to its Feature 4 state.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-007",
+      "description": "When testCoverage === 'uncovered' and guardrailTest is provided and guardrailTest.behaviorRuleId appears in finding.behaviorRuleIds, the Test Gap section must render a 'TEST GAP' header, the precise claim 'No existing test distinguishes the current DOWN behavior from HALF_UP for BR-01', and a 'Generate Guardrail Test' button.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-008",
+      "description": "Clicking 'Generate Guardrail Test' triggers a two-stage deterministic transition using local React state and setTimeout: stage 1 shows 'Preparing characterization test…' immediately, stage 2 shows 'Building boundary scenario…' after 450 ms, and the GuardrailTestView renders after 900 ms total. No fake token streaming. Both setTimeout handles must be cancelled in a useEffect cleanup function to prevent state updates on unmounted components.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-009",
+      "description": "Create app/components/GuardrailTestView.tsx as a Client Component accepting guardrailTest: GuardrailTest. It must display: filename header, coverage target (behaviorRuleId pill + protectedBehavior), boundary scenario block (balance/rate/rawFee/currentResult/proposedResult), behavior baseline showing 12.345→12.34 (DOWN) vs 12.345→12.35 (HALF_UP) with detectionNote, read-only Java code block, rationale, and a FIXTURE-DRIVEN status badge. No hardcoded Java in JSX.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-010",
+      "description": "The copy button in GuardrailTestView calls navigator.clipboard.writeText(guardrailTest.code), toggles its label to 'Copied' for 2 seconds on success, and silently catches errors if the clipboard API is unavailable.",
+      "priority": "should"
+    },
+    {
+      "id": "REQ-011",
+      "description": "The UI must not display 'Test passed' or 'Test failed'. The detection note section must be labeled 'Expected detection'. No Maven invocation occurs.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-012",
+      "description": "All new UI must use the established Legacy Lens design tokens (--surface-*, --border-*, --text-*, --risk-*). No gradients, no animation libraries, no emojis, no AI sparkle effects. GuardrailTestView is rendered inline below the Test Gap section using the same max-height CSS transition pattern as IntentPanel.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-013",
+      "description": "The fixture meridian-sample-guardrail-test.json must contain syntactically plausible JUnit 5 Java code using @ExtendWith(MockitoExtension.class), mirroring LateFeeServiceTest conventions, with the 1500.00 balance/0.00823 rate scenario, asserting assertEquals(new BigDecimal(\"12.34\"), lateFeeCharged, ...).",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-014",
+      "description": "Data flow: JSON fixture → GuardrailTestWireSchema.parse() in loader.ts → guardrailTestFromWireFormat() → GuardrailTest domain type → FindingsPane → GuardrailTestView. No raw JSON may reach any UI component.",
+      "priority": "must"
+    },
+    {
+      "id": "REQ-015",
+      "description": "The implementation must be structured so Feature 6 can replace the fixture import in loader.ts with real Bob output without modifying UI components — GuardrailTestWireSchema and the domain type must remain as the stable interface.",
+      "priority": "must"
+    }
+  ],
+  "non_requirements": [
+    "No real IBM Bob API invocation or live analysis pipeline.",
+    "No modification of demo/legacy-billing/** (frozen fixture must remain untouched).",
+    "No adding the characterization test to demo/legacy-billing/src/test/**.",
+    "No Maven execution from the UI.",
+    "No code editor widget — read-only display only.",
+    "No tab navigation redesign.",
+    "No Behavior Map or blast-radius visualization.",
+    "No GitHub integration, database, or authentication.",
+    "No fake token streaming or fake AI progress beyond the two-message transition.",
+    "Do not display 'Test passed' or 'Test failed'.",
+    "No redesign of DiffPane, ReviewHeader, or IntentPanel.",
+    "Do not modify lib/analysis/types.ts, parser.ts, review.ts, intent.ts, blast-radius.ts, or metadata.ts.",
+    "Do not modify any existing fixture JSON files.",
+    "Do not modify Feature 1–4 tests.",
+    "No new npm runtime dependencies."
+  ],
+  "allowed_paths": [
+    "lib/analysis/guardrail-test.ts",
+    "lib/analysis/fixtures/meridian-sample-guardrail-test.json",
+    "app/components/GuardrailTestView.tsx",
+    "app/__tests__/guardrail-test.test.tsx",
+    "lib/review-workspace/loader.ts",
+    "app/page.tsx",
+    "app/components/FindingsPane.tsx"
+  ],
+  "forbidden_paths": [
+    "demo/legacy-billing/**",
+    "demo/legacy-billing/src/**",
+    "demo/legacy-billing/pom.xml",
+    "demo/legacy-billing/proposed-change.patch",
+    "demo/legacy-billing/PROPOSED_CHANGE.md",
+    "lib/analysis/types.ts",
+    "lib/analysis/parser.ts",
+    "lib/analysis/review.ts",
+    "lib/analysis/intent.ts",
+    "lib/analysis/blast-radius.ts",
+    "lib/analysis/metadata.ts",
+    "lib/analysis/__tests__/behavioral-contract.test.ts",
+    "lib/analysis/__tests__/data-foundation.test.ts",
+    "lib/analysis/fixtures/meridian-sample-review.json",
+    "lib/analysis/fixtures/meridian-sample-contract.json",
+    "lib/analysis/fixtures/meridian-sample-intent.json",
+    "lib/analysis/fixtures/meridian-sample-metadata.json",
+    "lib/analysis/fixtures/meridian-sample-blast-radius.json",
+    "app/__tests__/review-workspace.test.tsx",
+    "app/__tests__/reveal-intent.test.tsx"
+  ],
+  "expected_files": {
+    "created": [
+      "lib/analysis/guardrail-test.ts",
+      "lib/analysis/fixtures/meridian-sample-guardrail-test.json",
+      "app/components/GuardrailTestView.tsx",
+      "app/__tests__/guardrail-test.test.tsx"
+    ],
+    "modified": [
+      "lib/review-workspace/loader.ts",
+      "app/page.tsx",
+      "app/components/FindingsPane.tsx"
+    ],
+    "deleted": []
+  },
+  "dependencies": {
+    "runtime": [],
+    "dev": []
+  },
+  "test_requirements": [
+    {
+      "id": "TEST-401",
+      "description": "GuardrailTestWireSchema.safeParse passes on a valid wire object with all required fields.",
+      "type": "unit",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-402",
+      "description": "GuardrailTestWireSchema.safeParse fails when behavior_rule_id is missing.",
+      "type": "unit",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-403",
+      "description": "guardrailTestFromWireFormat maps behavior_rule_id to behaviorRuleId and all other snake_case fields to camelCase correctly.",
+      "type": "unit",
+      "requirement_ref": "REQ-003"
+    },
+    {
+      "id": "TEST-404",
+      "description": "meridian-sample-guardrail-test.json passes GuardrailTestWireSchema.safeParse.",
+      "type": "unit",
+      "requirement_ref": "REQ-002"
+    },
+    {
+      "id": "TEST-405",
+      "description": "getMeridianReviewSession() returns a guardrailTest object with behaviorRuleId === 'BR-01'.",
+      "type": "integration",
+      "requirement_ref": "REQ-004"
+    },
+    {
+      "id": "TEST-406",
+      "description": "FindingsPane with a finding having testCoverage 'uncovered' and guardrailTest provided renders text matching 'TEST GAP'.",
+      "type": "unit",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-407",
+      "description": "FindingsPane renders a 'Generate Guardrail Test' button when guardrailTest is provided and testCoverage is 'uncovered'.",
+      "type": "unit",
+      "requirement_ref": "REQ-007"
+    },
+    {
+      "id": "TEST-408",
+      "description": "Clicking 'Generate Guardrail Test' renders a transitional message containing 'Preparing characterization test'.",
+      "type": "unit",
+      "requirement_ref": "REQ-008"
+    },
+    {
+      "id": "TEST-409",
+      "description": "After fake timers advance past 900 ms, GuardrailTestView is rendered in the DOM.",
+      "type": "unit",
+      "requirement_ref": "REQ-008"
+    },
+    {
+      "id": "TEST-410",
+      "description": "GuardrailTestView renders guardrailTest.filename (LateFeeRoundingCharacterizationTest.java).",
+      "type": "unit",
+      "requirement_ref": "REQ-009"
+    },
+    {
+      "id": "TEST-411",
+      "description": "GuardrailTestView renders 'BR-01' from guardrailTest.behaviorRuleId.",
+      "type": "unit",
+      "requirement_ref": "REQ-009"
+    },
+    {
+      "id": "TEST-412",
+      "description": "GuardrailTestView code block contains '1500.00' (canonical balance scenario).",
+      "type": "unit",
+      "requirement_ref": "REQ-009"
+    },
+    {
+      "id": "TEST-413",
+      "description": "GuardrailTestView code block contains '12.34' (the asserted current behavior).",
+      "type": "unit",
+      "requirement_ref": "REQ-009"
+    },
+    {
+      "id": "TEST-414",
+      "description": "GuardrailTestView does not render any text matching 'Test passed' or 'Test failed'.",
+      "type": "unit",
+      "requirement_ref": "REQ-011"
+    }
+  ],
+  "security_requirements": [
+    {
+      "id": "SEC-401",
+      "description": "guardrailTest data must flow through GuardrailTestWireSchema.parse() in loader.ts before reaching any UI component — no raw fixture JSON may reach the React tree.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-402",
+      "description": "GuardrailTestView must render only typed GuardrailTest domain model fields using standard JSX string interpolation — no dangerouslySetInnerHTML, no eval, no raw JSON rendering.",
+      "category": "input-validation"
+    },
+    {
+      "id": "SEC-403",
+      "description": "The copy button must use navigator.clipboard.writeText only; errors must be silently caught; no unintended side effects or data exfiltration.",
+      "category": "configuration"
+    },
+    {
+      "id": "SEC-404",
+      "description": "No external URLs, network I/O, fetch calls, or API routes are introduced by this feature.",
+      "category": "configuration"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-501",
+      "description": "npm test exits 0: all prior tests TEST-001 through TEST-308 still pass, and new tests TEST-401 through TEST-414 all pass.",
+      "automated": true
+    },
+    {
+      "id": "AC-502",
+      "description": "npm run lint exits 0 with no new ESLint errors or warnings.",
+      "automated": true
+    },
+    {
+      "id": "AC-503",
+      "description": "tsc --noEmit exits 0 with no TypeScript errors.",
+      "automated": true
+    },
+    {
+      "id": "AC-504",
+      "description": "npm run build exits 0 (Turbopack build succeeds).",
+      "automated": true
+    },
+    {
+      "id": "AC-505",
+      "description": "When the BR-01 / F-001 finding is selected, the finding detail shows a 'TEST GAP' section and a 'Generate Guardrail Test' button visible without horizontal scrolling at 1280px viewport.",
+      "automated": false
+    },
+    {
+      "id": "AC-506",
+      "description": "Clicking 'Generate Guardrail Test' shows at least one transitional message ('Preparing characterization test…') before the test view appears.",
+      "automated": false
+    },
+    {
+      "id": "AC-507",
+      "description": "After the transition, the generated test view shows 'LateFeeRoundingCharacterizationTest.java' as the filename.",
+      "automated": false
+    },
+    {
+      "id": "AC-508",
+      "description": "The generated test code block contains 'balance=1500.00', '0.00823', '12.345', and '12.34'.",
+      "automated": false
+    },
+    {
+      "id": "AC-509",
+      "description": "The generated test view shows proposed behavior '12.35' and a detection note explaining what the test would catch.",
+      "automated": false
+    },
+    {
+      "id": "AC-510",
+      "description": "The UI does not display 'Test passed' or 'Test failed' anywhere in the generated test view.",
+      "automated": false
+    },
+    {
+      "id": "AC-511",
+      "description": "The generated test view contains a 'FIXTURE-DRIVEN' or equivalent badge indicating the artifact is not live Bob output.",
+      "automated": false
+    },
+    {
+      "id": "AC-512",
+      "description": "The existing 'Reveal Intent' interaction on F-001 remains functional after this feature is implemented.",
+      "automated": false
+    },
+    {
+      "id": "AC-513",
+      "description": "DiffPane and ReviewHeader remain visually unchanged.",
+      "automated": false
+    },
+    {
+      "id": "AC-514",
+      "description": "git diff --name-only shows no changes to demo/legacy-billing/**.",
+      "automated": true
+    },
+    {
+      "id": "AC-515",
+      "description": "loader.ts contains GuardrailTestWireSchema.parse() applied to the guardrail test fixture before any field is accessed (verifiable by code inspection).",
+      "automated": true
+    },
+    {
+      "id": "AC-516",
+      "description": "GuardrailTestView.tsx contains no dangerouslySetInnerHTML usage (verifiable by grep).",
+      "automated": true
+    }
+  ],
+  "change_budget": {
+    "files_changed": 7,
+    "lines_added": 450,
+    "lines_removed": 0
+  },
+  "iteration_limit": 10,
+  "status": "approved",
+  "approved_at": "2026-08-29T11:42:17Z"
+}

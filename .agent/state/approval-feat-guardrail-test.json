@@ -1,0 +1,8 @@
+{
+  "feature_id": "feat-guardrail-test",
+  "approved_at": "2026-08-29T11:42:17Z",
+  "approved_by": "human",
+  "plan_path": ".agent/plans/plan-feat-guardrail-test.md",
+  "contract_path": ".agent/contracts/contract-feat-guardrail-test.json",
+  "grill_report_path": ".agent/reports/grill.md"
+}

@@ -10,7 +10,7 @@ import { getMeridianReviewSession } from "@/lib/review-workspace/loader";
 import { MeridianDiff } from "@/lib/review-workspace/diff";
 
 export default function ReviewWorkspacePage() {
-  const { report, contract, metadata, intent } = getMeridianReviewSession();
+  const { report, contract, metadata, intent, guardrailTest } = getMeridianReviewSession();
 
   // Derive the short filename for the header from the first finding's changedFile
   const firstFinding = report.findings[0];
@@ -40,7 +40,7 @@ export default function ReviewWorkspacePage() {
 
         {/* Findings pane — right 50% */}
         <div className="flex-1 overflow-hidden">
-          <FindingsPane findings={report.findings} contract={contract} intent={intent} />
+          <FindingsPane findings={report.findings} contract={contract} intent={intent} guardrailTest={guardrailTest} />
         </div>
       </main>
     </div>

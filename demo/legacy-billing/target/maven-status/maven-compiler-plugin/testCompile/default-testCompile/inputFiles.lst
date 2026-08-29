@@ -1,0 +1,7 @@
+/home/uzi/Projects/hackathons/legacy-lens/demo/legacy-billing/src/test/java/com/meridian/billing/BillingServiceTest.java
+/home/uzi/Projects/hackathons/legacy-lens/demo/legacy-billing/src/test/java/com/meridian/billing/CollectionsPolicyTest.java
+/home/uzi/Projects/hackathons/legacy-lens/demo/legacy-billing/src/test/java/com/meridian/billing/GracePeriodPolicyTest.java
+/home/uzi/Projects/hackathons/legacy-lens/demo/legacy-billing/src/test/java/com/meridian/billing/HardshipPolicyTest.java
+/home/uzi/Projects/hackathons/legacy-lens/demo/legacy-billing/src/test/java/com/meridian/billing/InterestCalculatorTest.java
+/home/uzi/Projects/hackathons/legacy-lens/demo/legacy-billing/src/test/java/com/meridian/billing/LateFeeServiceTest.java
+/home/uzi/Projects/hackathons/legacy-lens/demo/legacy-billing/src/test/java/com/meridian/billing/MonthlyStatementServiceTest.java

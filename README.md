@@ -2,77 +2,61 @@
 
 > **Review what legacy code means, not just what it says.**
 
-Legacy Lens is a behavior-aware code review tool that uses **IBM Bob** to investigate legacy software changes beyond syntax and surface-level test coverage.
+Legacy Lens is a behavior-aware code review prototype built for the **IBM TechXchange Hackathon 2026**. It uses **IBM Bob** to investigate a proposed change in a legacy codebase, reconstruct the surrounding behavioral rules, trace supporting evidence, identify weak test protection, and present the result as a structured review.
 
-A one-line change in an old codebase can silently alter years of accumulated business behavior while every existing test still passes. Legacy Lens reconstructs those hidden behavioral contracts, traces their downstream impact, evaluates existing test protection, and presents the evidence a reviewer needs to make a safer decision.
-
----
+A change can be tiny, compile cleanly, and pass every existing test while still altering customer-facing behavior. Legacy Lens is designed for exactly that gap.
 
 ## Demo
 
-**Video Demo:** [https://youtu.be/htVD7ZWm7P8]
+**3-minute video:** [Watch the Legacy Lens demo](https://youtu.be/htVD7ZWm7P8)
 
-**Hackathon:** IBM TechXchange Hackathon 2026
+**Repository:** [github.com/uzainmalik123/legacy-lens](https://github.com/uzainmalik123/legacy-lens)
 
 ---
 
 ## The Problem
 
-Legacy systems rarely come with a complete explanation of the business decisions encoded inside them.
+Legacy systems accumulate business rules over years of maintenance. Those rules are often spread across utility methods, service layers, constants, tests, and downstream consumers rather than documented in one place.
 
-Important behavior is often distributed across:
-
-- utility methods
-- service layers
-- constants
-- historical tests
-- downstream consumers
-- edge-case handling
-
-This creates a dangerous gap during code review.
+That makes seemingly harmless changes risky.
 
 A proposed change may:
 
-- compile successfully
-- pass every existing test
-- appear harmless in the diff
-- still change customer-facing business behavior
+- compile successfully,
+- pass the existing test suite,
+- look reasonable in a diff,
+- and still change established behavior.
 
-Traditional code review tools are excellent at showing **what changed**.
+Traditional review tools are excellent at showing **what changed**.
 
-Legacy Lens focuses on a different question:
+Legacy Lens asks a different question:
 
 > **What behavior does this change threaten?**
 
 ---
 
-## The Demo Scenario
+## Demo Scenario: Meridian Loan Servicing
 
-Legacy Lens includes a controlled legacy Java billing application used to demonstrate the problem.
+The repository includes a controlled Java 17 legacy billing application under `demo/legacy-billing/`.
 
-The proposed change is intentionally tiny:
+The proposed change is intentionally small:
 
 ```diff
 - return value.setScale(2, RoundingMode.DOWN);
 + return value.setScale(2, RoundingMode.HALF_UP);
 ```
 
-At first glance, this looks like a normal rounding cleanup.
-
-The existing test suite still passes.
-
-But when Legacy Lens analyzes the change using IBM Bob, it discovers that the affected function participates in an existing late-fee behavior and that changing the rounding mode can change customer-visible results.
+The existing JUnit suite still passes because its current inputs do not necessarily exercise values where the two rounding modes diverge.
 
 For example:
 
 ```text
-Raw late fee: 12.345
-
-RoundingMode.DOWN    → 12.34
-RoundingMode.HALF_UP → 12.35
+Raw value:               12.345
+RoundingMode.DOWN:       12.34
+RoundingMode.HALF_UP:    12.35
 ```
 
-The existing tests exercise values where the two rounding modes happen to produce the same result, meaning the test suite can remain green while the behavioral contract changes.
+Legacy Lens uses IBM Bob to inspect the source, tests, and proposed patch and explain why that one-line change may matter beyond the method where it appears.
 
 ---
 
@@ -80,25 +64,26 @@ The existing tests exercise values where the two rounding modes happen to produc
 
 ### Behavioral Risk Review
 
-Legacy Lens reviews the proposed change against behavioral rules reconstructed from the existing codebase.
+The main review workspace combines the proposed diff with Bob-generated findings.
 
-Instead of only showing the diff, it surfaces findings such as:
+A finding can include:
 
-- affected behavioral rules
-- severity
-- business impact
-- confidence
-- test coverage
-- recommended action
-- supporting evidence
+- severity,
+- affected behavioral rules,
+- summary,
+- business impact,
+- confidence,
+- test coverage,
+- recommended action,
+- and traceable evidence.
 
----
+The objective is to move review from **syntax-level inspection** toward **behavior-level reasoning**.
 
 ### Reveal Intent
 
-**Reveal Intent** explains the role the affected legacy code appears to play in the wider business process.
+**Reveal Intent** exposes the role the changed code appears to play in the wider system.
 
-For the demo billing application, Legacy Lens can trace the changed late-fee behavior through areas such as:
+For the Meridian scenario, the affected value can be traced through code such as:
 
 ```text
 MoneyUtils.roundLateFee
@@ -114,77 +99,65 @@ CollectionsPolicy
 AccountClosureService
 ```
 
-The goal is not to generate a generic explanation of a function.
+The UI separates inferred intent from observed evidence so reviewers can distinguish model interpretation from directly supported facts.
 
-The goal is to reconstruct the behavioral context surrounding it.
+### Evidence-Backed Findings
 
----
+Legacy Lens keeps important conclusions traceable to the code that supports them.
 
-### Evidence-Backed Analysis
+Evidence can include:
 
-Legacy Lens keeps conclusions traceable.
+- source file,
+- class or method,
+- line or line range,
+- evidence type,
+- and a relevant excerpt.
 
-Findings can include:
-
-- source file
-- symbol / method
-- line or line range
-- evidence type
-- relevant source excerpt
-
-This allows a reviewer to inspect **why** a conclusion was reached instead of trusting opaque AI-generated prose.
-
----
+This makes the analysis inspectable rather than presenting an opaque AI summary.
 
 ### Test Gap Detection
 
-Existing coverage does not necessarily mean the behavior is protected.
+Legacy Lens does not treat “tests passed” as equivalent to “behavior protected.”
 
-Legacy Lens inspects the test suite and identifies whether current tests exercise inputs that would actually distinguish the proposed behavior from the existing behavior.
+It examines whether existing tests actually exercise values capable of distinguishing the current implementation from the proposed implementation.
 
-In the demo scenario, existing tests use values where both rounding modes return the same result.
+In the demo scenario, the existing suite contains late-fee inputs for which `DOWN` and `HALF_UP` produce the same result, so the suite can remain green while the rounding behavior changes elsewhere.
 
-That makes the difference invisible to the current suite.
+### Guardrail Test
 
----
+The analysis contract supports an optional Bob-generated characterization test.
 
-### Guardrail Test Generation
-
-When sufficient evidence is available, Legacy Lens can produce a characterization test designed to preserve the discovered legacy behavior.
-
-The generated test targets boundary values where the current and proposed implementations diverge, giving developers a concrete guardrail before changing undocumented behavior.
+When sufficient evidence is available, Legacy Lens can surface a JUnit guardrail test targeting a boundary where the current and proposed behaviors diverge. Generated test code is displayed for review; Legacy Lens does not automatically execute model-generated code.
 
 ---
 
-## How IBM Bob Powers Legacy Lens
+## How IBM Bob Is Used
 
-IBM Bob is used in two major ways throughout the project.
+IBM Bob is part of both the **development process** and the **running product**.
 
-### 1. Building Legacy Lens
+### Development with IBM Bob
 
-IBM Bob was used throughout development to help implement and verify the project across multiple engineering tasks, including:
+Bob was used across the project for tasks including:
 
-- data-contract implementation
-- runtime validation
-- frontend review workspace development
-- test-gap and guardrail-test experiences
-- analysis-pipeline integration
-- automated testing
-- type checking
-- build verification
-- security review
+- feature planning and implementation,
+- TypeScript and Zod data contracts,
+- review workspace development,
+- Reveal Intent,
+- guardrail-test presentation,
+- automated testing,
+- verification,
+- security review,
+- and the live analysis pipeline.
 
-Task-session summary screenshots are included in this repository under:
+Required IBM Bob task-session summary screenshots are included in:
 
-```text
-docs/bob-session-summaries/
-```
+[`bob-session-screenshots/`](./bob-session-screenshots/)
 
-### 2. Runtime Behavioral Investigation
+### Runtime Analysis with IBM Bob
 
-Bob is also part of the running Legacy Lens product.
+When the user selects **Analyze Change**, Legacy Lens performs a live Bob analysis server-side.
 
-When **Analyze Change** is triggered, Legacy Lens constructs a restricted analysis context containing only the permitted legacy application inputs:
+The application constructs an explicit analysis context containing only these permitted inputs:
 
 ```text
 demo/legacy-billing/src/main/java/**
@@ -193,243 +166,261 @@ demo/legacy-billing/pom.xml
 demo/legacy-billing/proposed-change.patch
 ```
 
-The application invokes **IBM Bob Shell** server-side.
+The application then invokes **IBM Bob Shell** in non-interactive mode and supplies that context through standard input.
 
-Bob independently investigates:
+Bob investigates:
 
-1. what changed
-2. what behavior surrounds the changed code
-3. which behavioral rules are affected
-4. downstream dependencies
-5. existing test protection
-6. potential business impact
-7. supporting source evidence
-8. possible characterization tests
+1. what changed,
+2. what behavior surrounds the changed code,
+3. which behavioral rules are affected,
+4. downstream dependencies,
+5. existing test protection,
+6. potential impact,
+7. supporting evidence,
+8. and, when possible, a characterization test.
 
-Bob returns structured analysis that is validated before Legacy Lens renders it.
+Legacy Lens does not pass its private evaluation documents into the live analysis context.
 
-The analysis UI clearly distinguishes:
+---
+
+## Live vs Fixture Mode
+
+The application starts with deterministic development fixtures so the interface can be explored without consuming a live Bob run.
+
+The header distinguishes between:
 
 ```text
-DEVELOPMENT FIXTURE
+FIXTURE
 ```
 
-from:
+and:
 
 ```text
-LIVE BOB ANALYSIS
+LIVE
 ```
 
-Fixture data is never silently presented as live analysis.
+A successful Bob run replaces the fixture session with the validated live result.
+
+If live analysis fails, Legacy Lens displays an error rather than silently presenting fixture data as live output.
 
 ---
 
 ## Architecture
 
 ```text
-Legacy Java Application
-+
-Existing JUnit Tests
-+
-Proposed Git Patch
+Legacy Java Source
++ Existing JUnit Tests
++ Proposed Patch
         │
         ▼
-Restricted Analysis Context
+Explicit Allowlist
+        │
+        ▼
+Structured Analysis Prompt
         │
         ▼
 IBM Bob Shell
         │
         ▼
-Structured Analysis Output
+Structured JSON Result
         │
         ▼
-Runtime Zod Validation
+Zod Runtime Validation
         │
         ▼
-TypeScript Domain Models
+Typed Domain Models
         │
         ▼
 Legacy Lens Review Workspace
         │
-        ├── Behavioral Findings
+        ├── Risk Findings
         ├── Reveal Intent
         ├── Evidence
         ├── Test Coverage
-        └── Guardrail Test
+        └── Optional Guardrail Test
 ```
+
+### Bob transport
+
+The server-side Bob adapter uses `child_process.spawn()` with fixed arguments and `shell: false`.
+
+The live demo call is intentionally constrained:
+
+```text
+bob run
+--mode ask
+--format json
+--max-cost 5
+--max-turns 1
+--disable-mcp
+--disable-subagents
+--disable-tool-groups read,edit,execute
+```
+
+The application itself reads the allowlisted files and provides their contents to Bob. Bob does not need filesystem tools for the runtime analysis call.
 
 ---
 
-## Structured Analysis
+## Structured Analysis Contracts
 
-Legacy Lens uses explicit structured contracts instead of passing raw model prose directly into the interface.
+Raw model prose is never sent directly to UI components.
 
-The analysis layer includes models for:
+Legacy Lens defines runtime-validated contracts for:
 
-```text
-Behavioral Contract
-Review Report
-Reveal Intent
-Blast Radius
-Analysis Metadata
-Guardrail Test
-```
+- Behavioral Contract,
+- Review Report,
+- Reveal Intent,
+- Analysis Metadata,
+- Guardrail Test,
+- and Blast Radius data.
 
-Wire data uses `snake_case`, is validated with Zod, and is mapped into typed `camelCase` domain models before reaching the UI.
+The data path is:
 
 ```text
-IBM Bob output
-     ↓
-snake_case wire format
-     ↓
+Bob output
+    ↓
+snake_case wire data
+    ↓
 Zod validation
-     ↓
-TypeScript mapper
-     ↓
-domain model
-     ↓
+    ↓
+TypeScript mapping
+    ↓
+camelCase domain models
+    ↓
 UI
 ```
 
-Malformed model output is rejected rather than silently displayed.
+Malformed output is rejected before it can become application state.
 
 ---
 
 ## Analysis Boundary
 
-The included Meridian billing application is a controlled evaluation target.
+The Meridian application is a controlled evaluation target.
 
-The live analyzer is explicitly restricted to:
+The live runtime uses a hard-coded allowlist defined in `lib/analysis/allowlist.ts`.
+
+The following evaluation documents exist in the repository for fixture specification and human evaluation, but are intentionally excluded from Bob's runtime context:
 
 ```text
-demo/legacy-billing/src/main/java/**
-demo/legacy-billing/src/test/java/**
-demo/legacy-billing/pom.xml
-demo/legacy-billing/proposed-change.patch
+demo/legacy-billing/GROUND_TRUTH.md
+demo/legacy-billing/LEGACY_FIXTURE_SPEC.md
+demo/legacy-billing/ANALYSIS_SCOPE.md
+demo/legacy-billing/PROPOSED_CHANGE.md
 ```
 
-Evaluation and specification documents are deliberately excluded from the runtime analysis context so Bob must infer behavior from the application itself.
-
-This prevents the analysis from being contaminated by predefined answers.
+This forces the live analysis to reason from the Java implementation, tests, build descriptor, and proposed patch rather than reading a predefined answer.
 
 ---
 
 ## Tech Stack
 
-### Application
+### Web application
 
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- Zod
+- Next.js 16
+- React 19
+- TypeScript 5
+- Tailwind CSS 4
+- Zod 4
 
 ### Testing
 
-- Vitest
+- Vitest 4
 - Testing Library
 - happy-dom
 - JUnit 5
-- Maven
+- Maven Surefire
 
-### AI / Analysis
+### Analysis
 
 - IBM Bob
 - IBM Bob Shell
 
-### Demo Target
+### Legacy demo target
 
 - Java 17
+- Maven
 
 ---
 
-## Project Structure
+## Repository Structure
 
 ```text
 app/
 ├── api/
 │   └── analyze/
+│       └── route.ts
 ├── components/
-│   ├── ReviewWorkspace.tsx
-│   ├── ReviewHeader.tsx
+│   ├── AnalysisProgress.tsx
 │   ├── DiffPane.tsx
 │   ├── FindingsPane.tsx
-│   ├── IntentPanel.tsx
 │   ├── GuardrailTestView.tsx
-│   └── AnalysisProgress.tsx
-│
+│   ├── IntentPanel.tsx
+│   ├── ReviewHeader.tsx
+│   └── ReviewWorkspace.tsx
+└── __tests__/
+
 lib/
 ├── analysis/
-│   ├── types.ts
-│   ├── parser.ts
-│   ├── review.ts
+│   ├── allowlist.ts
+│   ├── blast-radius.ts
+│   ├── bob-client.ts
+│   ├── bundle.ts
+│   ├── guardrail-test.ts
 │   ├── intent.ts
 │   ├── metadata.ts
-│   ├── blast-radius.ts
-│   ├── guardrail-test.ts
-│   ├── bob-client.ts
-│   └── fixtures/
-│
-├── review-workspace/
-│
+│   ├── parser.ts
+│   ├── prompt.ts
+│   ├── review.ts
+│   ├── types.ts
+│   ├── fixtures/
+│   └── __tests__/
+└── review-workspace/
+
 demo/
 └── legacy-billing/
-    ├── src/
-    │   ├── main/java/
-    │   └── test/java/
+    ├── src/main/java/
+    ├── src/test/java/
     ├── pom.xml
-    └── proposed-change.patch
+    ├── proposed-change.patch
+    └── evaluation/specification documents
 
-docs/
-└── bob-session-summaries/
+bob-session-screenshots/
+
+.bob/
+.agent/
 ```
 
 ---
 
-## Running Legacy Lens Locally
+## Running Locally
 
 ### Prerequisites
 
-Install:
-
-- Node.js
+- Node.js **20.9+**
 - npm
 - Java 17+
 - Maven
-- IBM Bob Shell
+- IBM Bob Shell available as `bob`
+- IBM Bob inference API key for live analysis
 
-Clone the repository:
-
-```bash
-git clone [https://github.com/uzainmalik123/legacy-lens]
-cd [legacy-lens]
-```
-
-Install application dependencies:
+### Clone and install
 
 ```bash
+git clone https://github.com/uzainmalik123/legacy-lens.git
+cd legacy-lens
 npm install
 ```
 
----
+### Configure IBM Bob
 
-## Configure IBM Bob
-
-Legacy Lens never stores the real IBM Bob API key in source control.
-
-Create:
-
-```text
-.env.local
-```
-
-and add:
+Create a local `.env.local` file:
 
 ```env
-BOB_API_KEY=your_ibm_bob_api_key
+BOB_API_KEY=your_ibm_bob_api_key_here
 ```
 
-Never commit `.env.local` or your real credentials.
+Do not commit `.env.local` or a real API key.
 
 Verify Bob Shell is available:
 
@@ -437,42 +428,28 @@ Verify Bob Shell is available:
 bob --version
 ```
 
----
-
-## Start the Application
+### Start Legacy Lens
 
 ```bash
 npm run dev
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:3000
 ```
 
-The application initially loads deterministic development-fixture analysis.
-
-Select:
-
-```text
-ANALYZE CHANGE
-```
-
-to trigger a live IBM Bob analysis.
+The workspace initially loads in fixture mode. Select **Analyze Change** to trigger a live IBM Bob analysis.
 
 ---
 
-## Run Frontend Tests
+## Validation and Tests
+
+Run the web test suite:
 
 ```bash
 npm test
-```
-
-Type check:
-
-```bash
-npx tsc --noEmit
 ```
 
 Lint:
@@ -481,92 +458,91 @@ Lint:
 npm run lint
 ```
 
+Type check:
+
+```bash
+npx tsc --noEmit
+```
+
 Production build:
 
 ```bash
 npm run build
 ```
 
----
-
-## Run the Legacy Java Tests
+Run the Meridian JUnit suite:
 
 ```bash
 cd demo/legacy-billing
 mvn test
 ```
 
-The key idea of the demo is that the existing suite can remain green even though the proposed rounding change alters behavior for inputs not represented by the current tests.
+The demo intentionally illustrates that a passing test suite does not necessarily characterize every behavior affected by a change.
 
 ---
 
-## Security
+## Security and Safety Boundaries
 
-Legacy Lens keeps analysis execution intentionally narrow for the hackathon prototype.
+The hackathon prototype keeps the runtime intentionally narrow:
 
-Key safeguards include:
-
-- IBM Bob credentials remain server-side
-- credentials are supplied through environment variables
-- no API keys are committed to the repository
-- Bob is given an explicit allowlisted analysis context
-- evaluation/ground-truth documents are excluded
-- generated model output is runtime validated with Zod
-- malformed Bob output fails safely
-- live analysis never silently falls back to fixture mode
-- automated tests mock Bob execution
-- generated guardrail code is displayed as data rather than automatically executed
-- Bob Shell is invoked with fixed arguments rather than user-controlled shell commands
+- IBM Bob credentials remain server-side.
+- Credentials are read from environment variables.
+- `.env*` files are excluded from Git and Bob access.
+- Runtime source access uses an explicit hard-coded allowlist.
+- Ground-truth and specification files are excluded from the live context.
+- Bob Shell is invoked with fixed arguments using `spawn()` and `shell: false`.
+- The runtime Bob call disables filesystem/edit/execute tool groups.
+- Bob output is runtime validated before application use.
+- Live failures do not silently fall back to fixture results.
+- Automated tests mock Bob execution rather than spending Bobcoins.
+- Generated Java tests are displayed as data and are not automatically executed.
 
 ---
 
 ## Why Legacy Lens Is Different
 
-Traditional code review asks:
+Traditional review asks:
 
 > **What changed?**
 
 Static analysis asks:
 
-> **Does this violate a known rule?**
+> **Does this violate a rule we already know?**
 
-Test coverage asks:
+Coverage asks:
 
-> **Was this line executed?**
+> **Was this code executed by a test?**
 
 Legacy Lens asks:
 
 > **What behavior has this code been preserving, does this change threaten it, and what evidence supports that conclusion?**
 
-That distinction matters most in legacy systems where institutional knowledge has disappeared but the behavior remains embedded in the code.
+That question is particularly useful in legacy systems where the people who understood the original rationale may no longer be available, while the behavior itself still lives in the code.
 
 ---
 
-## Future Direction
+## Prototype Scope
 
-The hackathon prototype intentionally focuses on one controlled legacy application and proposed change.
+The hackathon implementation intentionally focuses on one controlled legacy Java application and one proposed change.
 
-A production version could extend Legacy Lens with:
+Future directions include:
 
-- arbitrary repository analysis
-- GitHub pull request integration
-- persistent behavioral-contract history
-- interactive blast-radius visualization
-- reviewer collaboration
-- generated guardrail-test validation
-- historical change comparison
-- policy and domain-document integration
-- broader language support
+- arbitrary repository analysis,
+- pull-request integration,
+- persistent behavioral-contract history,
+- interactive blast-radius visualization,
+- generated-test execution in a sandboxed validation environment,
+- historical behavior comparison,
+- policy/document evidence,
+- and additional programming languages.
 
 ---
 
 ## Team
 
-**Team:** [Bob the Solo Builder]
+**Team:** Bob the Solo Builder
 
-**Members:**
-
-- [Uzain Ahmed]
+**Member:** Uzain Ahmed
 
 ---
 
@@ -574,9 +550,9 @@ A production version could extend Legacy Lens with:
 
 Built for the **IBM TechXchange Hackathon 2026**.
 
-**Demo:** [https://youtu.be/htVD7ZWm7P8]
-
-**Repository:** [https://github.com/uzainmalik123/legacy-lens]
+- **Demo:** [https://youtu.be/htVD7ZWm7P8](https://youtu.be/htVD7ZWm7P8)
+- **Repository:** [https://github.com/uzainmalik123/legacy-lens](https://github.com/uzainmalik123/legacy-lens)
+- **IBM Bob task-session summaries:** [`bob-session-screenshots/`](./bob-session-screenshots/)
 
 ---
 
